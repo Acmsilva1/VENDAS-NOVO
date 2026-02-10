@@ -2,74 +2,127 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Estratégico - Vendas & Predição</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <title>Dash Estratégico - Transparência Total</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #333; }
-        h2 { color: #00d1b2; margin-top: 0; }
-        .valor { font-size: 24px; font-weight: bold; }
+        :root {
+            --bg: #121212; --card: #1e1e1e; --green: #00d1b2; --red: #ff3860; --text: #e0e0e0;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #333; }
+        .card h2 { font-size: 0.8rem; color: #888; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .metric { margin-bottom: 10px; }
+        .label { font-size: 0.9rem; color: #aaa; }
+        .valor { font-size: 1.5rem; font-weight: bold; display: block; }
+        .lucro { color: var(--green); }
+        .gasto { color: var(--red); }
+        .footer { margin-top: 20px; font-size: 0.7rem; color: #555; text-align: center; }
+        #update-time { font-weight: bold; color: var(--green); }
     </style>
 </head>
 <body>
-    <h1>Dashboard Unificado</h1>
-    <p>Última atualização: <span id="update-time">--:--:--</span></p>
+    <h1 style="font-size: 1.4rem; margin-bottom: 5px;">Performance Unificada</h1>
+    <p style="font-size: 0.9rem; color: #888; margin-bottom: 25px;">Visão Geral: Diária, Mensal e Anual</p>
 
     <div class="grid">
         <div class="card">
-            <h2>Hoje</h2>
-            <p>Faturamento: <span id="vendas-hoje" class="valor">R$ 0,00</span></p>
-            <p>Pedidos: <span id="pedidos-hoje">0</span></p>
+            <h2>Hoje (Real Time)</h2>
+            <div class="metric">
+                <span class="label">Vendas</span>
+                <span id="v-dia" class="valor">R$ 0,00</span>
+            </div>
+            <div class="metric">
+                <span class="label">Gastos</span>
+                <span id="g-dia" class="valor gasto">R$ 0,00</span>
+            </div>
+            <div style="border-top: 1px solid #333; padding-top: 10px;">
+                <span class="label">Lucro Diário</span>
+                <span id="l-dia" class="valor lucro">R$ 0,00</span>
+            </div>
         </div>
+
         <div class="card">
             <h2>Mês Atual</h2>
-            <p>Lucro Estimado: <span id="lucro-mes" class="valor">R$ 0,00</span></p>
+            <div class="metric">
+                <span class="label">Acumulado Vendas</span>
+                <span id="v-mes" class="valor">R$ 0,00</span>
+            </div>
+            <div class="metric">
+                <span class="label">Acumulado Gastos</span>
+                <span id="g-mes" class="valor gasto">R$ 0,00</span>
+            </div>
+            <div style="border-top: 1px solid #333; padding-top: 10px;">
+                <span class="label">Lucro Mensal</span>
+                <span id="l-mes" class="valor lucro">R$ 0,00</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Ano Fiscal</h2>
+            <div class="metric">
+                <span class="label">Total Vendas</span>
+                <span id="v-ano" class="valor">R$ 0,00</span>
+            </div>
+            <div class="metric">
+                <span class="label">Total Gastos</span>
+                <span id="g-ano" class="valor gasto">R$ 0,00</span>
+            </div>
+            <div style="border-top: 1px solid #333; padding-top: 10px;">
+                <span class="label">Lucro Anual</span>
+                <span id="l-ano" class="valor lucro">R$ 0,00</span>
+            </div>
         </div>
     </div>
 
-    <br>
-    <div class="card">
-        <h2>Auditoria Mensal & Predição</h2>
-        <canvas id="graficoAuditoria"></canvas>
+    <div class="footer">
+        Sincronizado com Supabase às <span id="update-time">--:--:--</span>
     </div>
 
     <script>
-        async function loadDashboard() {
-            const res = await fetch('/api/status');
-            const data = await res.json();
-            
-            if(data.erro) { console.error(data.erro); return; }
-
-            // Atualiza Texto
-            document.getElementById('vendas-hoje').innerText = `R$ ${data.resumo_hoje.faturamento.toFixed(2)}`;
-            document.getElementById('pedidos-hoje').innerText = data.resumo_hoje.pedidos;
-            document.getElementById('lucro-mes').innerText = `R$ ${(data.performance_mes.faturamento - data.performance_mes.gastos).toFixed(2)}`;
-            document.getElementById('update-time').innerText = data.atualizado_em;
-
-            // Gráfico de Auditoria
-            const ctx = document.getElementById('graficoAuditoria').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.auditoria_mensal.map(m => m.mes),
-                    datasets: [{
-                        label: 'Vendas',
-                        data: data.auditoria_mensal.map(m => m.vendas),
-                        borderColor: '#00d1b2',
-                        backgroundColor: 'rgba(0, 209, 178, 0.1)',
-                        fill: true
-                    }, {
-                        label: 'Gastos',
-                        data: data.auditoria_mensal.map(m => m.gastos),
-                        borderColor: '#ff3860',
-                        fill: false
-                    }]
-                },
-                options: { responsive: true, scales: { y: { beginAtZero: true } } }
-            });
+        // Registro do Service Worker (PWA)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
         }
-        loadDashboard();
+
+        async function updateDash() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                if (data.erro) {
+                    console.error(data.erro);
+                    return;
+                }
+
+                const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                // Update Diário
+                document.getElementById('v-dia').innerText = fmt(data.diario.vendas);
+                document.getElementById('g-dia').innerText = fmt(data.diario.gastos);
+                document.getElementById('l-dia').innerText = fmt(data.diario.lucro);
+
+                // Update Mensal
+                document.getElementById('v-mes').innerText = fmt(data.mensal.vendas);
+                document.getElementById('g-mes').innerText = fmt(data.mensal.gastos);
+                document.getElementById('l-mes').innerText = fmt(data.mensal.lucro);
+
+                // Update Anual
+                document.getElementById('v-ano').innerText = fmt(data.anual.vendas);
+                document.getElementById('g-ano').innerText = fmt(data.anual.gastos);
+                document.getElementById('l-ano').innerText = fmt(data.anual.lucro);
+
+                document.getElementById('update-time').innerText = data.atualizado_em;
+
+            } catch (err) {
+                document.getElementById('update-time').innerText = "Erro de Sync";
+            }
+        }
+
+        updateDash();
+        // Atualiza a cada 5 minutos automaticamente
+        setInterval(updateDash, 300000);
     </script>
 </body>
 </html>
