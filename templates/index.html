@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Estratégico - Vendas & Predição</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #333; }
+        h2 { color: #00d1b2; margin-top: 0; }
+        .valor { font-size: 24px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard Unificado</h1>
+    <p>Última atualização: <span id="update-time">--:--:--</span></p>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Hoje</h2>
+            <p>Faturamento: <span id="vendas-hoje" class="valor">R$ 0,00</span></p>
+            <p>Pedidos: <span id="pedidos-hoje">0</span></p>
+        </div>
+        <div class="card">
+            <h2>Mês Atual</h2>
+            <p>Lucro Estimado: <span id="lucro-mes" class="valor">R$ 0,00</span></p>
+        </div>
+    </div>
+
+    <br>
+    <div class="card">
+        <h2>Auditoria Mensal & Predição</h2>
+        <canvas id="graficoAuditoria"></canvas>
+    </div>
+
+    <script>
+        async function loadDashboard() {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            
+            if(data.erro) { console.error(data.erro); return; }
+
+            // Atualiza Texto
+            document.getElementById('vendas-hoje').innerText = `R$ ${data.resumo_hoje.faturamento.toFixed(2)}`;
+            document.getElementById('pedidos-hoje').innerText = data.resumo_hoje.pedidos;
+            document.getElementById('lucro-mes').innerText = `R$ ${(data.performance_mes.faturamento - data.performance_mes.gastos).toFixed(2)}`;
+            document.getElementById('update-time').innerText = data.atualizado_em;
+
+            // Gráfico de Auditoria
+            const ctx = document.getElementById('graficoAuditoria').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.auditoria_mensal.map(m => m.mes),
+                    datasets: [{
+                        label: 'Vendas',
+                        data: data.auditoria_mensal.map(m => m.vendas),
+                        borderColor: '#00d1b2',
+                        backgroundColor: 'rgba(0, 209, 178, 0.1)',
+                        fill: true
+                    }, {
+                        label: 'Gastos',
+                        data: data.auditoria_mensal.map(m => m.gastos),
+                        borderColor: '#ff3860',
+                        fill: false
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+        loadDashboard();
+    </script>
+</body>
+</html>
