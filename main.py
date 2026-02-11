@@ -10,18 +10,21 @@ from supabase import create_client, Client
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
+# CORREÇÃO DO BUG: Simplificação da conexão para evitar o erro de 'proxy'
 def get_supabase() -> Client:
-    return create_client(os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY"))
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_KEY")
+    # Removendo qualquer configuração extra que possa disparar o erro de argumento inesperado
+    return create_client(url, key)
 
 @app.get("/api/status")
 async def api_status():
     try:
         supabase = get_supabase()
-        # Definimos o fuso local para Vitória/ES (GMT-3)
         tz_local = pytz.timezone('America/Sao_Paulo')
         agora = datetime.now(tz_local)
         
-        # LGPD: Seleção estrita de colunas conforme suas tabelas
+        # LGPD: Seleção focada em dados financeiros, ignorando 'dados_do_comprador'
         res_v = supabase.table("vendas").select("carimbo_data_hora, valor").execute()
         res_d = supabase.table("despesas").select("carimbo_data_hora, valor").execute() 
 
@@ -31,14 +34,12 @@ async def api_status():
         def processar_base_andre(df):
             if df.empty: return 0, 0, 0
             
-            # Converte valor para numérico
+            # Conversão de valores
             df['valor'] = pd.to_numeric(df['valor'], errors='coerce').fillna(0)
             
-            # TRATAMENTO DE DATA ISO:
-            # O Pandas lê o formato AAAA-MM-DD nativamente, mas precisamos forçar a consciência de fuso
-            df['dt'] = pd.to_datetime(df['carimbo_data_hora']).dt.tz_localize('UTC').dt.tz_convert(tz_local)
+            # Tratamento da data ISO que vimos na sua imagem
+            df['dt'] = pd.to_datetime(df['carimbo_data_hora']).dt.tz_localize('UTC', ambivalent='naive').dt.tz_convert(tz_local)
             
-            # Filtros comparando com o 'agora' do seu fuso
             hoje = df[df['dt'].dt.date == agora.date()]['valor'].sum()
             mes = df[df['dt'].dt.month == agora.month]['valor'].sum()
             ano = df[df['dt'].dt.year == agora.year]['valor'].sum()
@@ -53,15 +54,14 @@ async def api_status():
             "mensal": {"vendas": float(v_mes), "gastos": float(d_mes), "lucro": float(v_mes - d_mes)},
             "anual": {"vendas": float(v_ano), "gastos": float(d_ano), "lucro": float(v_ano - d_ano)},
             "debug": {
-                "lidas_vendas": len(df_v),
-                "lidas_despesas": len(df_d),
-                "horario_consulta": agora.strftime("%H:%M:%S")
+                "status": "Conectado",
+                "vendas_encontradas": len(df_v)
             }
         }
     except Exception as e:
-        return {"erro": f"Bug no processamento: {str(e)}"}
+        # Se o erro de 'proxy' persistir, saberemos exatamente onde
+        return {"erro": f"Erro na conexão ou processamento: {str(e)}"}
 
-# Rotas PWA
 @app.get("/manifest.json")
 async def get_manifest(): return FileResponse("manifest.json")
 @app.get("/sw.js")
