@@ -26,20 +26,31 @@
         <div class="card-glass p-5">
             <p class="text-[10px] text-gray-500 font-bold uppercase mb-2">Hoje</p>
             <div id="v_diario" class="text-2xl font-bold">R$ 0,00</div>
-            <div class="text-[10px] text-blue-400 mt-1"><i class="fas fa-box-open"></i> <span id="q_diario">0</span> ITENS</div>
-            <div id="l_diario" class="text-sm font-semibold text-emerald-500 mt-3">+ R$ 0,00 Lucro</div>
+            <div class="text-[10px] text-blue-400 mt-1 mb-3"><i class="fas fa-box-open"></i> <span id="q_diario">0</span> ITENS</div>
+            <div class="flex justify-between text-[10px] border-t border-gray-800 pt-3">
+                <span class="text-red-500 uppercase">Gastos: <span id="g_diario">R$ 0,00</span></span>
+                <span class="text-emerald-500 font-bold" id="l_diario">R$ 0,00</span>
+            </div>
         </div>
+
         <div class="card-glass p-5">
             <p class="text-[10px] text-gray-500 font-bold uppercase mb-2">Mês Atual</p>
             <div id="v_mensal" class="text-2xl font-bold">R$ 0,00</div>
-            <div class="text-[10px] text-blue-400 mt-1"><i class="fas fa-box-open"></i> <span id="q_mensal">0</span> ITENS</div>
-            <div id="l_mensal" class="text-sm font-semibold text-emerald-500 mt-3">+ R$ 0,00 Lucro</div>
+            <div class="text-[10px] text-blue-400 mt-1 mb-3"><i class="fas fa-box-open"></i> <span id="q_mensal">0</span> ITENS</div>
+            <div class="flex justify-between text-[10px] border-t border-gray-800 pt-3">
+                <span class="text-red-500 uppercase">Gastos: <span id="g_mensal">R$ 0,00</span></span>
+                <span class="text-emerald-500 font-bold" id="l_mensal">R$ 0,00</span>
+            </div>
         </div>
+
         <div class="card-glass p-5 border-emerald-900/30">
             <p class="text-[10px] text-gray-500 font-bold uppercase mb-2">Ano 2026</p>
             <div id="v_anual" class="text-2xl font-bold text-white">R$ 0,00</div>
-            <div class="text-[10px] text-blue-400 mt-1"><i class="fas fa-box-open"></i> <span id="q_anual">0</span> ITENS</div>
-            <div id="l_anual" class="text-sm font-semibold text-emerald-500 mt-3">+ R$ 0,00 Lucro</div>
+            <div class="text-[10px] text-blue-400 mt-1 mb-3"><i class="fas fa-box-open"></i> <span id="q_anual">0</span> ITENS</div>
+            <div class="flex justify-between text-[10px] border-t border-gray-800 pt-3">
+                <span class="text-red-500 uppercase">Gastos: <span id="g_anual">R$ 0,00</span></span>
+                <span class="text-emerald-500 font-bold" id="l_anual">R$ 0,00</span>
+            </div>
         </div>
     </div>
 
@@ -68,32 +79,46 @@
         const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
         async function fetchDash() {
-            const r = await fetch('/api/status');
-            const d = await r.json();
-            
-            // Atualiza Cards Principais
-            document.getElementById('timestamp').innerText = d.atualizado_em;
-            document.getElementById('v_diario').innerText = fmt(d.diario.vendas);
-            document.getElementById('q_diario').innerText = d.diario.itens;
-            document.getElementById('l_diario').innerText = `+ ${fmt(d.diario.lucro)} Lucro`;
-            
-            document.getElementById('v_mensal').innerText = fmt(d.mensal.vendas);
-            document.getElementById('q_mensal').innerText = d.mensal.itens;
-            document.getElementById('l_mensal').innerText = `+ ${fmt(d.mensal.lucro)} Lucro`;
-            
-            document.getElementById('v_anual').innerText = fmt(d.anual.vendas);
-            document.getElementById('q_anual').innerText = d.anual.itens;
-            document.getElementById('l_anual').innerText = `+ ${fmt(d.anual.lucro)} Lucro`;
+            try {
+                const r = await fetch('/api/status');
+                const d = await r.json();
+                
+                // Relógio e Identificação
+                document.getElementById('timestamp').innerText = d.atualizado_em;
 
-            // Configura Seletor Mensal
-            dadosMensais = d.filtros_mensais;
-            const seletor = document.getElementById('seletor_mes');
-            const mesAtualId = new Date().getMonth() + 1;
+                // Diário
+                document.getElementById('v_diario').innerText = fmt(d.diario.vendas);
+                document.getElementById('g_diario').innerText = fmt(d.diario.gastos);
+                document.getElementById('l_diario').innerText = fmt(d.diario.lucro);
+                document.getElementById('q_diario').innerText = d.diario.itens;
 
-            if (seletor.options.length === 0) {
-                seletor.innerHTML = dadosMensais.map(m => `<option value="${m.id}" ${m.id === mesAtualId ? 'selected' : ''}>${m.mes}</option>`).join('');
+                // Mensal
+                document.getElementById('v_mensal').innerText = fmt(d.mensal.vendas);
+                document.getElementById('g_mensal').innerText = fmt(d.mensal.gastos);
+                document.getElementById('l_mensal').innerText = fmt(d.mensal.lucro);
+                document.getElementById('q_mensal').innerText = d.mensal.itens;
+
+                // Anual
+                document.getElementById('v_anual').innerText = fmt(d.anual.vendas);
+                document.getElementById('g_anual').innerText = fmt(d.anual.gastos);
+                document.getElementById('l_anual').innerText = fmt(d.anual.lucro);
+                document.getElementById('q_anual').innerText = d.anual.itens;
+
+                // Seletor Mensal
+                dadosMensais = d.filtros_mensais;
+                const seletor = document.getElementById('seletor_mes');
+                const mesAtualId = new Date().getMonth() + 1;
+
+                if (seletor.options.length === 0) {
+                    seletor.innerHTML = dadosMensais.map(m => 
+                        `<option value="${m.id}" ${m.id === mesAtualId ? 'selected' : ''}>${m.mes}</option>`
+                    ).join('');
+                }
+                atualizarDetalhe(seletor.value);
+
+            } catch (err) {
+                console.error("Erro ao atualizar:", err);
             }
-            atualizarDetalhe(seletor.value);
         }
 
         function atualizarDetalhe(id) {
