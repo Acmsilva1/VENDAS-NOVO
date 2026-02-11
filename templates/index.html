@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão André - BI Final</title>
+    <title>Gestão de vendas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -11,14 +11,21 @@
     <style>
         body { background-color: #0f0f0f; color: #e5e7eb; font-family: 'Inter', sans-serif; }
         .card-glass { background: #1a1a1a; border: 1px solid #2d2d2d; border-radius: 1rem; }
-        select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='C19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1rem; padding-right: 2rem; }
+        select { 
+            appearance: none; 
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='C19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); 
+            background-repeat: no-repeat; 
+            background-position: right 0.5rem center; 
+            background-size: 1rem; 
+            padding-right: 2rem; 
+        }
     </style>
 </head>
 <body class="p-4 max-w-4xl mx-auto mb-10">
     <header class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-xl font-black tracking-tight text-white uppercase">Analytics Estratégico</h1>
-            <p class="text-gray-500 text-[10px] uppercase tracking-widest">Performance 2026</p>
+            <p class="text-gray-500 text-[10px] uppercase tracking-widest">Vendas</p>
         </div>
         <div id="timestamp" class="text-emerald-500 font-mono text-sm tracking-tighter">--:--:--</div>
     </header>
@@ -73,7 +80,8 @@
             <h2 class="text-xs font-bold text-gray-400 uppercase">Histórico Detalhado</h2>
             <select id="seletor_mes" class="bg-black border border-gray-700 text-xs rounded-lg px-4 py-1 outline-none text-emerald-500 font-bold"></select>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-black/40 p-4 rounded-lg border border-gray-800">
                 <p class="text-[9px] text-gray-500 uppercase mb-1">Vendas no Mês</p>
                 <p id="det_vendas" class="text-lg font-bold text-white">R$ 0,00</p>
@@ -83,11 +91,14 @@
                 <p class="text-[9px] text-gray-500 uppercase mb-1">Gastos no Mês</p>
                 <p id="det_gastos" class="text-lg font-bold text-red-500">R$ 0,00</p>
             </div>
+            <div class="bg-black/40 p-4 rounded-lg border border-emerald-900/30">
+                <p class="text-[9px] text-gray-500 uppercase mb-1">Lucro Líquido</p>
+                <p id="det_lucro" class="text-lg font-bold text-emerald-500">R$ 0,00</p>
+            </div>
         </div>
     </section>
 
     <script>
-        // Registra o plugin globalmente
         Chart.register(ChartDataLabels);
 
         let dadosMensais = [];
@@ -99,9 +110,10 @@
                 const r = await fetch('/api/status');
                 const d = await r.json();
                 
+                if(d.erro) throw new Error(d.erro);
+
                 document.getElementById('timestamp').innerText = d.atualizado_em;
 
-                // Atualiza Cards
                 const cards = ['diario', 'mensal', 'anual'];
                 cards.forEach(p => {
                     document.getElementById(`v_${p}`).innerText = fmt(d[p].vendas);
@@ -112,7 +124,6 @@
 
                 dadosMensais = d.filtros_mensais;
                 
-                // Popula Seletor
                 const sel = document.getElementById('seletor_mes');
                 if(sel.options.length === 0) {
                     sel.innerHTML = dadosMensais.map(m => `<option value="${m.id}">${m.mes}</option>`).join('');
@@ -120,11 +131,10 @@
                 }
                 atualizarDetalhe(sel.value);
 
-                // Renderiza Gráficos
                 renderPizza(d.anual.lucro, d.anual.gastos);
                 renderBarras(dadosMensais);
 
-            } catch (e) { console.error("Erro no fetch:", e); }
+            } catch (e) { console.error("Erro no Dashboard:", e); }
         }
 
         function renderPizza(lucro, gastos) {
@@ -149,7 +159,7 @@
                         datalabels: {
                             color: '#fff',
                             font: { weight: 'bold', size: 11 },
-                            formatter: (val) => total > 0 ? ((val/total)*100).toFixed(1) + '%' : ''
+                            formatter: (val) => total > 0 ? ((val/total)*100).toFixed(1) + '%' : '0%'
                         }
                     }
                 }
@@ -195,11 +205,13 @@
             if(m) {
                 document.getElementById('det_vendas').innerText = fmt(m.vendas);
                 document.getElementById('det_gastos').innerText = fmt(m.gastos);
+                document.getElementById('det_lucro').innerText = fmt(m.lucro);
                 document.getElementById('det_itens').innerText = `${m.itens} ITENS`;
             }
         }
 
         document.getElementById('seletor_mes').addEventListener('change', (e) => atualizarDetalhe(e.target.value));
+        
         initDash();
         setInterval(initDash, 60000);
     </script>
