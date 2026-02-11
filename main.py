@@ -22,7 +22,7 @@ async def api_status():
         tz_local = pytz.timezone('America/Sao_Paulo')
         agora = datetime.now(tz_local)
         
-        # LGPD: Selecionando apenas o financeiro
+        # LGPD: Pegamos apenas o necessário (data, valor e id para contar itens)
         res_v = supabase.table("vendas").select("carimbo_data_hora, valor").execute()
         res_d = supabase.table("despesas").select("carimbo_data_hora, valor").execute() 
 
@@ -30,38 +30,35 @@ async def api_status():
         df_d = pd.DataFrame(res_d.data)
 
         def processar_base_andre(df):
-            if df.empty: return 0, 0, 0
+            if df.empty: return 0, 0, 0, 0, 0, 0
             
             df['valor'] = pd.to_numeric(df['valor'], errors='coerce').fillna(0)
-            
-            # CORREÇÃO DO PANDAS: Removido 'ambivalent' para compatibilidade total
-            # Convertendo a data ISO que vimos no seu zoom
+            # Tratamento de data blindado
             df['dt'] = pd.to_datetime(df['carimbo_data_hora']).dt.tz_localize(None).dt.tz_localize('UTC').dt.tz_convert(tz_local)
             
-            hoje = df[df['dt'].dt.date == agora.date()]['valor'].sum()
-            mes = df[df['dt'].dt.month == agora.month]['valor'].sum()
-            ano = df[df['dt'].dt.year == agora.year]['valor'].sum()
+            # Filtros Temporais
+            df_hoje = df[df['dt'].dt.date == agora.date()]
+            df_mes = df[df['dt'].dt.month == agora.month]
+            df_ano = df[df['dt'].dt.year == agora.year]
             
-            return hoje, mes, ano
+            # Valores e Quantidades
+            return (
+                float(df_hoje['valor'].sum()), len(df_hoje),
+                float(df_mes['valor'].sum()), len(df_mes),
+                float(df_ano['valor'].sum()), len(df_ano)
+            )
 
-        v_hoje, v_mes, v_ano = processar_base_andre(df_v)
-        d_hoje, d_mes, d_ano = processar_base_andre(df_d)
+        v_hoje, q_hoje, v_mes, q_mes, v_ano, q_ano = processar_base_andre(df_v)
+        d_hoje, _, d_mes, _, d_ano, _ = processar_base_andre(df_d) # Quantidade de despesas costuma ser menos relevante, mas está no código
 
         return {
-            "diario": {"vendas": float(v_hoje), "gastos": float(d_hoje), "lucro": float(v_hoje - d_hoje)},
-            "mensal": {"vendas": float(v_mes), "gastos": float(d_mes), "lucro": float(v_mes - d_mes)},
-            "anual": {"vendas": float(v_ano), "gastos": float(d_ano), "lucro": float(v_ano - d_ano)},
-            "debug": {
-                "total_vendas": len(df_v),
-                "total_despesas": len(df_d)
-            }
+            "diario": {"vendas": v_hoje, "gastos": d_hoje, "lucro": v_hoje - d_hoje, "itens": q_hoje},
+            "mensal": {"vendas": v_mes, "gastos": d_mes, "lucro": v_mes - d_mes, "itens": q_mes},
+            "anual": {"vendas": v_ano, "gastos": d_ano, "lucro": v_ano - d_ano, "itens": q_ano},
+            "atualizado_em": agora.strftime("%H:%M:%S") # Correção da cosmética/UX
         }
     except Exception as e:
         return {"erro": f"Erro técnico: {str(e)}"}
 
-@app.get("/manifest.json")
-async def get_manifest(): return FileResponse("manifest.json")
-@app.get("/sw.js")
-async def get_sw(): return FileResponse("sw.js")
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def home(request: Request): return templates.TemplateResponse("index.html", {"request": request})
