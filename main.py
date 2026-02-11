@@ -17,41 +17,51 @@ def get_supabase() -> Client:
 async def api_status():
     try:
         supabase = get_supabase()
-        tz = pytz.timezone('America/Sao_Paulo')
-        agora = datetime.now(tz)
+        # Definimos o fuso local para Vitória/ES (GMT-3)
+        tz_local = pytz.timezone('America/Sao_Paulo')
+        agora = datetime.now(tz_local)
         
-        # LGPD: Selecionamos apenas valor e data
+        # LGPD: Seleção estrita de colunas conforme suas tabelas
         res_v = supabase.table("vendas").select("carimbo_data_hora, valor").execute()
         res_d = supabase.table("despesas").select("carimbo_data_hora, valor").execute() 
 
         df_v = pd.DataFrame(res_v.data)
         df_d = pd.DataFrame(res_d.data)
 
-        def processar_df(df):
-            if df.empty: return 0, 0, 0, 0
-            df['valor'] = pd.to_numeric(df['valor'], errors='coerce').fillna(0)
-            # A mágica está aqui: converter garantindo que o Pandas entenda o formato ISO do Supabase
-            df['dt'] = pd.to_datetime(df['carimbo_data_hora'], errors='coerce').dt.tz_localize(None).dt.tz_localize('UTC').dt.tz_convert(tz)
+        def processar_base_andre(df):
+            if df.empty: return 0, 0, 0
             
+            # Converte valor para numérico
+            df['valor'] = pd.to_numeric(df['valor'], errors='coerce').fillna(0)
+            
+            # TRATAMENTO DE DATA ISO:
+            # O Pandas lê o formato AAAA-MM-DD nativamente, mas precisamos forçar a consciência de fuso
+            df['dt'] = pd.to_datetime(df['carimbo_data_hora']).dt.tz_localize('UTC').dt.tz_convert(tz_local)
+            
+            # Filtros comparando com o 'agora' do seu fuso
             hoje = df[df['dt'].dt.date == agora.date()]['valor'].sum()
             mes = df[df['dt'].dt.month == agora.month]['valor'].sum()
             ano = df[df['dt'].dt.year == agora.year]['valor'].sum()
-            total = df['valor'].sum()
-            return hoje, mes, ano, total
+            
+            return hoje, mes, ano
 
-        v_hoje, v_mes, v_ano, v_total = processar_df(df_v)
-        d_hoje, d_mes, d_ano, d_total = processar_df(df_d)
+        v_hoje, v_mes, v_ano = processar_base_andre(df_v)
+        d_hoje, d_mes, d_ano = processar_base_andre(df_d)
 
         return {
             "diario": {"vendas": float(v_hoje), "gastos": float(d_hoje), "lucro": float(v_hoje - d_hoje)},
             "mensal": {"vendas": float(v_mes), "gastos": float(d_mes), "lucro": float(v_mes - d_mes)},
             "anual": {"vendas": float(v_ano), "gastos": float(d_ano), "lucro": float(v_ano - d_ano)},
-            "acumulado_total": {"vendas": float(v_total), "gastos": float(d_total)},
-            "debug": {"linhas_vendas": len(df_v), "data_servidor": agora.strftime("%Y-%m-%d")}
+            "debug": {
+                "lidas_vendas": len(df_v),
+                "lidas_despesas": len(df_d),
+                "horario_consulta": agora.strftime("%H:%M:%S")
+            }
         }
     except Exception as e:
-        return {"erro": str(e)}
+        return {"erro": f"Bug no processamento: {str(e)}"}
 
+# Rotas PWA
 @app.get("/manifest.json")
 async def get_manifest(): return FileResponse("manifest.json")
 @app.get("/sw.js")
