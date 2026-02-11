@@ -3,126 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="manifest" href="/manifest.json">
-    <title>Dash Estratégico - Transparência Total</title>
+    <title>Dashboard de Vendas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --bg: #121212; --card: #1e1e1e; --green: #00d1b2; --red: #ff3860; --text: #e0e0e0;
-        }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
-        .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #333; }
-        .card h2 { font-size: 0.8rem; color: #888; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px; }
-        .metric { margin-bottom: 10px; }
-        .label { font-size: 0.9rem; color: #aaa; }
-        .valor { font-size: 1.5rem; font-weight: bold; display: block; }
-        .lucro { color: var(--green); }
-        .gasto { color: var(--red); }
-        .footer { margin-top: 20px; font-size: 0.7rem; color: #555; text-align: center; }
-        #update-time { font-weight: bold; color: var(--green); }
+        body { background-color: #121212; color: #e0e0e0; }
+        .card { background-color: #1e1e1e; border: 1px solid #333; }
     </style>
 </head>
-<body>
-    <h1 style="font-size: 1.4rem; margin-bottom: 5px;">Performance Unificada</h1>
-    <p style="font-size: 0.9rem; color: #888; margin-bottom: 25px;">Visão Geral: Diária, Mensal e Anual</p>
+<body class="p-4">
+    <header class="mb-6">
+        <h1 class="text-2xl font-bold">Dashboard de Vendas</h1>
+        <p class="text-gray-400 text-sm">Visão Geral: Diária, Mensal e Anual</p>
+    </header>
 
-    <div class="grid">
-        <div class="card">
-            <h2>Hoje (Real Time)</h2>
-            <div class="metric">
-                <span class="label">Vendas</span>
-                <span id="v-dia" class="valor">R$ 0,00</span>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card p-6 rounded-xl">
+            <h2 class="text-gray-400 text-xs font-bold uppercase mb-4">Hoje (Real Time)</h2>
+            <div class="mb-2">
+                <span class="text-sm text-gray-500">Vendas</span>
+                <div class="text-2xl font-bold" id="v_diario">R$ 0,00</div>
+                <div class="text-xs text-blue-400"><i class="fas fa-box"></i> <span id="q_diario">0</span> itens</div>
             </div>
-            <div class="metric">
-                <span class="label">Gastos</span>
-                <span id="g-dia" class="valor gasto">R$ 0,00</span>
+            <div class="mb-2">
+                <span class="text-sm text-gray-500">Gastos</span>
+                <div class="text-xl font-bold text-red-500" id="g_diario">R$ 0,00</div>
             </div>
-            <div style="border-top: 1px solid #333; padding-top: 10px;">
-                <span class="label">Lucro Diário</span>
-                <span id="l-dia" class="valor lucro">R$ 0,00</span>
+            <hr class="my-3 border-gray-800">
+            <div>
+                <span class="text-sm text-gray-500">Lucro Diário</span>
+                <div class="text-xl font-bold text-emerald-500" id="l_diario">R$ 0,00</div>
             </div>
         </div>
 
-        <div class="card">
-            <h2>Mês Atual</h2>
-            <div class="metric">
-                <span class="label">Acumulado Vendas</span>
-                <span id="v-mes" class="valor">R$ 0,00</span>
+        <div class="card p-6 rounded-xl">
+            <h2 class="text-gray-400 text-xs font-bold uppercase mb-4">Mês Atual</h2>
+            <div class="mb-2">
+                <span class="text-sm text-gray-500">Acumulado Vendas</span>
+                <div class="text-2xl font-bold" id="v_mensal">R$ 0,00</div>
+                <div class="text-xs text-blue-400"><i class="fas fa-box"></i> <span id="q_mensal">0</span> itens</div>
             </div>
-            <div class="metric">
-                <span class="label">Acumulado Gastos</span>
-                <span id="g-mes" class="valor gasto">R$ 0,00</span>
+            <div class="mb-2">
+                <span class="text-sm text-gray-500">Acumulado Gastos</span>
+                <div class="text-xl font-bold text-red-500" id="g_mensal">R$ 0,00</div>
             </div>
-            <div style="border-top: 1px solid #333; padding-top: 10px;">
-                <span class="label">Lucro Mensal</span>
-                <span id="l-mes" class="valor lucro">R$ 0,00</span>
+            <hr class="my-3 border-gray-800">
+            <div>
+                <span class="text-sm text-gray-500">Lucro Mensal</span>
+                <div class="text-xl font-bold text-emerald-500" id="l_mensal">R$ 0,00</div>
             </div>
         </div>
 
-        <div class="card">
-            <h2>Ano Fiscal</h2>
-            <div class="metric">
-                <span class="label">Total Vendas</span>
-                <span id="v-ano" class="valor">R$ 0,00</span>
+        <div class="card p-6 rounded-xl">
+            <h2 class="text-gray-400 text-xs font-bold uppercase mb-4">Ano Fiscal</h2>
+            <div class="mb-2">
+                <span class="text-sm text-gray-500">Total Vendas</span>
+                <div class="text-2xl font-bold" id="v_anual">R$ 0,00</div>
+                <div class="text-xs text-blue-400"><i class="fas fa-box"></i> <span id="q_anual">0</span> itens</div>
             </div>
-            <div class="metric">
-                <span class="label">Total Gastos</span>
-                <span id="g-ano" class="valor gasto">R$ 0,00</span>
+            <div class="mb-2">
+                <span class="text-sm text-gray-500">Total Gastos</span>
+                <div class="text-xl font-bold text-red-500" id="g_anual">R$ 0,00</div>
             </div>
-            <div style="border-top: 1px solid #333; padding-top: 10px;">
-                <span class="label">Lucro Anual</span>
-                <span id="l-ano" class="valor lucro">R$ 0,00</span>
+            <hr class="my-3 border-gray-800">
+            <div>
+                <span class="text-sm text-gray-500">Lucro Anual</span>
+                <div class="text-xl font-bold text-emerald-500" id="l_anual">R$ 0,00</div>
             </div>
         </div>
     </div>
 
-    <div class="footer">
-        Sincronizado com Supabase às <span id="update-time">--:--:--</span>
-    </div>
+    <footer class="mt-8 text-center text-xs text-gray-600">
+        Sincronizado com Supabase às <span id="timestamp" class="text-emerald-500">--:--:--</span>
+    </footer>
 
     <script>
-        // Registro do Service Worker (PWA)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
-        }
-
-        async function updateDash() {
+        async function atualizarDashboard() {
             try {
                 const response = await fetch('/api/status');
                 const data = await response.json();
 
-                if (data.erro) {
-                    console.error(data.erro);
-                    return;
-                }
+                if(data.erro) { console.error(data.erro); return; }
 
                 const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-                // Update Diário
-                document.getElementById('v-dia').innerText = fmt(data.diario.vendas);
-                document.getElementById('g-dia').innerText = fmt(data.diario.gastos);
-                document.getElementById('l-dia').innerText = fmt(data.diario.lucro);
+                // Mapeamento Diário
+                document.getElementById('v_diario').innerText = fmt(data.diario.vendas);
+                document.getElementById('g_diario').innerText = fmt(data.diario.gastos);
+                document.getElementById('l_diario').innerText = fmt(data.diario.lucro);
+                document.getElementById('q_diario').innerText = data.diario.itens;
 
-                // Update Mensal
-                document.getElementById('v-mes').innerText = fmt(data.mensal.vendas);
-                document.getElementById('g-mes').innerText = fmt(data.mensal.gastos);
-                document.getElementById('l-mes').innerText = fmt(data.mensal.lucro);
+                // Mapeamento Mensal
+                document.getElementById('v_mensal').innerText = fmt(data.mensal.vendas);
+                document.getElementById('g_mensal').innerText = fmt(data.mensal.gastos);
+                document.getElementById('l_mensal').innerText = fmt(data.mensal.lucro);
+                document.getElementById('q_mensal').innerText = data.mensal.itens;
 
-                // Update Anual
-                document.getElementById('v-ano').innerText = fmt(data.anual.vendas);
-                document.getElementById('g-ano').innerText = fmt(data.anual.gastos);
-                document.getElementById('l-ano').innerText = fmt(data.anual.lucro);
+                // Mapeamento Anual
+                document.getElementById('v_anual').innerText = fmt(data.anual.vendas);
+                document.getElementById('g_anual').innerText = fmt(data.anual.gastos);
+                document.getElementById('l_anual').innerText = fmt(data.anual.lucro);
+                document.getElementById('q_anual').innerText = data.anual.itens;
 
-                document.getElementById('update-time').innerText = data.atualizado_em;
+                // CORREÇÃO DO UNDEFINED
+                document.getElementById('timestamp').innerText = data.atualizado_em;
 
             } catch (err) {
-                document.getElementById('update-time').innerText = "Erro de Sync";
+                console.error("Falha ao buscar dados", err);
             }
         }
 
-        updateDash();
-        // Atualiza a cada 5 minutos automaticamente
-        setInterval(updateDash, 300000);
+        atualizarDashboard();
+        setInterval(atualizarDashboard, 30000); // Atualiza a cada 30 segundos
     </script>
 </body>
 </html>
