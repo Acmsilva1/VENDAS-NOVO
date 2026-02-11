@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dash-transparencia-v4';
+const CACHE_NAME = 'dash-transparencia-v5';
 const ASSETS = [
   '/',
   'https://cdn.jsdelivr.net/npm/chart.js' // Caso você decida voltar com os gráficos
