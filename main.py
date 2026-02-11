@@ -20,49 +20,48 @@ async def api_status():
         tz = pytz.timezone('America/Sao_Paulo')
         agora = datetime.now(tz)
         
-        # Puxamos TUDO da tabela para inspecionar
-        res_v = supabase.table("vendas").select("*").execute()
+        # 1. BUSCA TOTAL (Lendo as tabelas inteiras)
+        # LGPD: Selecionamos apenas valor e data, ignorando nomes e documentos
+        res_v = supabase.table("vendas").select("carimbo_data_hora, valor").execute()
+        res_d = supabase.table("despesas").select("carimbo_data_hora, valor").execute() 
+
         df_v = pd.DataFrame(res_v.data)
+        df_d = pd.DataFrame(res_d.data)
 
-        if df_v.empty:
-            return {"erro": "O Supabase retornou uma lista vazia. Verifique se a tabela 'vendas' tem dados."}
+        # Processamento de Vendas
+        if not df_v.empty:
+            df_v['valor'] = pd.to_numeric(df_v['valor'], errors='coerce').fillna(0)
+            # Normalização de data para o timezone correto
+            df_v['dt'] = pd.to_datetime(df_v['carimbo_data_hora']).dt.tz_localize(None).dt.tz_localize('UTC').dt.tz_convert(tz)
+            
+            v_hoje = df_v[df_v['dt'].dt.date == agora.date()]['valor'].sum()
+            v_mes = df_v[df_v['dt'].dt.month == agora.month]['valor'].sum()
+            v_ano = df_v[df_v['dt'].dt.year == agora.year]['valor'].sum()
+        else:
+            v_hoje = v_mes = v_ano = 0
 
-        # --- DIAGNÓSTICO DE COLUNAS ---
-        # Vamos descobrir como o banco chama a coluna de valor
-        colunas_disponiveis = df_v.columns.tolist()
-        
-        # Tenta achar algo que pareça com 'valor' ou 'carimbo' independente de maiúsculas
-        col_valor = next((c for c in colunas_disponiveis if 'valor' in c.lower()), None)
-        col_data = next((c for c in colunas_disponiveis if 'carimbo' in c.lower() or 'data' in c.lower()), None)
-
-        if not col_valor or not col_data:
-            return {
-                "erro": "Colunas não encontradas",
-                "colunas_que_existem": colunas_disponiveis
-            }
-
-        # Força a conversão para números e datas usando as colunas que ele achou
-        df_v[col_valor] = pd.to_numeric(df_v[col_valor], errors='coerce').fillna(0)
-        df_v['dt'] = pd.to_datetime(df_v[col_data]).dt.tz_convert(tz)
-
-        # Cálculos usando as colunas detectadas automaticamente
-        v_total = df_v[col_valor].sum()
-        v_hoje = df_v[df_v['dt'].dt.date == agora.date()][col_valor].sum()
+        # Processamento de Despesas (Tabela 'despesas' conforme sua imagem)
+        if not df_d.empty:
+            df_d['valor'] = pd.to_numeric(df_d['valor'], errors='coerce').fillna(0)
+            df_d['dt'] = pd.to_datetime(df_d['carimbo_data_hora']).dt.tz_localize(None).dt.tz_localize('UTC').dt.tz_convert(tz)
+            
+            d_hoje = df_d[df_d['dt'].dt.date == agora.date()]['valor'].sum()
+            d_mes = df_d[df_d['dt'].dt.month == agora.month]['valor'].sum()
+            d_ano = df_d[df_d['dt'].dt.year == agora.year]['valor'].sum()
+        else:
+            d_hoje = d_mes = d_ano = 0
 
         return {
-            "debug": {
-                "colunas_detectadas": {"valor": col_valor, "data": col_data},
-                "total_linhas_no_banco": len(df_v)
-            },
-            "diario": {"vendas": float(v_hoje), "gastos": 0, "lucro": float(v_hoje)},
-            "total_geral": {"vendas": float(v_total)},
-            "atualizado_em": agora.strftime("%H:%M:%S")
+            "diario": {"vendas": float(v_hoje), "gastos": float(d_hoje), "lucro": float(v_hoje - d_hoje)},
+            "mensal": {"vendas": float(v_mes), "gastos": float(d_mes), "lucro": float(v_mes - d_mes)},
+            "anual": {"vendas": float(v_ano), "gastos": float(d_ano), "lucro": float(v_ano - d_ano)},
+            "timestamp": agora.strftime("%d/%m/%Y %H:%M:%S")
         }
 
     except Exception as e:
-        return {"erro": f"Erro técnico: {str(e)}"}
+        return {"erro": f"Falha na consolidação: {str(e)}"}
 
-# Rotas do PWA (Mantidas)
+# Rotas de Infraestrutura PWA
 @app.get("/manifest.json")
 async def get_manifest(): return FileResponse("manifest.json")
 @app.get("/sw.js")
