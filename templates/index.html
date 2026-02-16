@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delícias da JU</title>
+    <title>Gestão de Vendas - Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -19,14 +19,16 @@
             background-size: 1rem; 
             padding-right: 2rem; 
         }
-        /* Previne quebras de layout em nomes muito grandes */
-        .truncate-custom { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+        /* Scrollbar customizada para não estragar o layout dark */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0f0f0f; }
+        ::-webkit-scrollbar-thumb { background: #2d2d2d; border-radius: 10px; }
     </style>
 </head>
 <body class="p-4 max-w-4xl mx-auto mb-10">
     <header class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-xl font-black tracking-tight text-white uppercase">Delícias da JU</h1>
+            <h1 class="text-xl font-black tracking-tight text-white uppercase">Analytics Estratégico</h1>
             <p class="text-gray-500 text-[10px] uppercase tracking-widest">Vendas</p>
         </div>
         <div id="timestamp" class="text-emerald-500 font-mono text-sm tracking-tighter">--:--:--</div>
@@ -78,15 +80,14 @@
     </div>
 
     <section class="card-glass p-6 mb-8">
-        <h2 class="text-[10px] font-bold text-gray-500 uppercase mb-4">Últimas Vendas do Dia</h2>
+        <h2 class="text-[10px] font-bold text-gray-500 uppercase mb-4">Últimas 5 Vendas Realizadas</h2>
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-[11px]">
+            <table class="w-full text-left text-xs">
                 <thead>
-                    <tr class="text-gray-600 border-b border-gray-800 uppercase">
-                        <th class="pb-3 font-bold">Comprador</th>
+                    <tr class="text-gray-600 border-b border-gray-800 uppercase tracking-wider">
                         <th class="pb-3 font-bold">Produto</th>
                         <th class="pb-3 font-bold text-right">Valor</th>
-                        <th class="pb-3 font-bold text-right text-gray-700">Hora</th>
+                        <th class="pb-3 font-bold text-right">Data/Hora</th>
                     </tr>
                 </thead>
                 <tbody id="lista_ultimas_vendas" class="divide-y divide-gray-800/50">
@@ -120,6 +121,7 @@
 
     <script>
         Chart.register(ChartDataLabels);
+
         let dadosMensais = [];
         let pizzaChart, barChart;
         const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -128,79 +130,78 @@
             try {
                 const r = await fetch('/api/status');
                 const d = await r.json();
+                
                 if(d.erro) throw new Error(d.erro);
 
-                // Atualiza o timestamp (checa os dois nomes de chave para evitar bugs)
-                document.getElementById('timestamp').innerText = d.atualizado_em || d.updated_at || "--:--:--";
+                document.getElementById('timestamp').innerText = d.atualizado_em;
 
-                const periods = ['diario', 'mensal', 'anual'];
-                periods.forEach(p => {
-                    if(d[p]) {
-                        document.getElementById(`v_${p}`).innerText = fmt(d[p].vendas || 0);
-                        document.getElementById(`g_${p}`).innerText = fmt(d[p].gastos || 0);
-                        document.getElementById(`l_${p}`).innerText = fmt(d[p].lucro || 0);
-                        document.getElementById(`q_${p}`).innerText = d[p].itens || 0;
-                    }
+                // Atualizar Cards Principais
+                const cards = ['diario', 'mensal', 'anual'];
+                cards.forEach(p => {
+                    document.getElementById(`v_${p}`).innerText = fmt(d[p].vendas);
+                    document.getElementById(`g_${p}`).innerText = fmt(d[p].gastos);
+                    document.getElementById(`l_${p}`).innerText = fmt(d[p].lucro);
+                    document.getElementById(`q_${p}`).innerText = d[p].itens;
                 });
 
-                // Renderiza a lista de vendas
+                // Atualizar Últimas Vendas
                 renderUltimasVendas(d.ultimas_vendas || []);
-                
-                // Configura o seletor de meses apenas na primeira carga
-                dadosMensais = d.filtros_mensais || [];
+
+                // Atualizar Gráficos e Filtros
+                dadosMensais = d.filtros_mensais;
                 const sel = document.getElementById('seletor_mes');
-                if(sel && sel.options.length === 0 && dadosMensais.length > 0) {
+                if(sel.options.length === 0) {
                     sel.innerHTML = dadosMensais.map(m => `<option value="${m.id}">${m.mes}</option>`).join('');
                     sel.value = new Date().getMonth() + 1;
                 }
-                
-                if(sel && sel.value) atualizarDetalhe(sel.value);
-                
-                // Gráficos
-                if(d.anual) renderPizza(d.anual.lucro || 0, d.anual.gastos || 0);
-                if(dadosMensais.length > 0) renderBarras(dadosMensais);
+                atualizarDetalhe(sel.value);
 
-            } catch (e) { 
-                console.error("Erro no Dashboard:", e);
-                // Feedback visual de erro para facilitar o seu debug estratégico
-                document.getElementById('timestamp').innerText = "ERRO API";
-                document.getElementById('timestamp').classList.replace('text-emerald-500', 'text-red-500');
-            }
+                renderPizza(d.anual.lucro, d.anual.gastos);
+                renderBarras(dadosMensais);
+
+            } catch (e) { console.error("Erro no Dashboard:", e); }
         }
 
         function renderUltimasVendas(vendas) {
             const container = document.getElementById('lista_ultimas_vendas');
-            if (!vendas || vendas.length === 0) {
-                container.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-gray-600 italic">Nenhuma venda registrada hoje.</td></tr>';
+            if (vendas.length === 0) {
+                container.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-gray-600">Nenhuma venda recente</td></tr>';
                 return;
             }
-            container.innerHTML = vendas.map(v => `
+
+            container.innerHTML = vendas.slice(0, 5).map(v => `
                 <tr class="hover:bg-white/5 transition-colors group">
-                    <td class="py-4 text-emerald-400 font-bold truncate-custom">${v.comprador || '---'}</td>
-                    <td class="py-4 text-gray-400 text-[10px]">${v.produto || 'Produto'}</td>
-                    <td class="py-4 text-right text-white font-mono font-bold">${fmt(v.valor || 0)}</td>
-                    <td class="py-4 text-right text-gray-600 font-mono text-[10px]">${v.data || '--:--'}</td>
+                    <td class="py-3 font-semibold text-gray-300 group-hover:text-white">${v.produto}</td>
+                    <td class="py-3 text-right text-emerald-500 font-mono font-bold">${fmt(v.valor)}</td>
+                    <td class="py-3 text-right text-gray-600 font-mono text-[10px]">${v.data}</td>
                 </tr>
             `).join('');
         }
 
         function renderPizza(lucro, gastos) {
             const ctx = document.getElementById('chartPizza');
-            if(!ctx) return;
             const total = lucro + gastos;
             if(pizzaChart) pizzaChart.destroy();
+            
             pizzaChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Lucro', 'Gastos'],
-                    datasets: [{ data: [lucro, gastos], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0, cutout: '75%' }]
+                    datasets: [{
+                        data: [lucro, gastos],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderWidth: 0,
+                        cutout: '75%'
+                    }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 15 } },
-                        datalabels: { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (val) => total > 0 ? ((val/total)*100).toFixed(1) + '%' : '0%' }
+                        legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 20 } },
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: (val) => total > 0 ? ((val/total)*100).toFixed(1) + '%' : '0%'
+                        }
                     }
                 }
             });
@@ -208,20 +209,32 @@
 
         function renderBarras(meses) {
             const ctx = document.getElementById('chartBarras');
-            if(!ctx) return;
             if(barChart) barChart.destroy();
+            
             barChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: meses.map(m => m.mes.substring(0,3)),
-                    datasets: [{ data: meses.map(m => m.vendas), backgroundColor: '#3b82f6', borderRadius: 4 }]
+                    datasets: [{
+                        data: meses.map(m => m.vendas),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: { padding: { top: 20 } },
-                    scales: { y: { display: false }, x: { ticks: { color: '#555', font: { size: 10 } }, grid: { display: false } } },
-                    plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', color: '#3b82f6', font: { weight: 'bold', size: 9 }, formatter: (val) => val > 0 ? 'R$' + Math.round(val) : '' } }
+                    layout: { padding: { top: 25 } },
+                    scales: { 
+                        y: { display: false },
+                        x: { ticks: { color: '#555', font: { size: 10 } }, grid: { display: false } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end', align: 'top', color: '#3b82f6',
+                            font: { weight: 'bold', size: 9 },
+                            formatter: (val) => val > 0 ? 'R$' + Math.round(val) : ''
+                        }
+                    }
                 }
             });
         }
@@ -229,18 +242,16 @@
         function atualizarDetalhe(id) {
             const m = dadosMensais.find(x => x.id == id);
             if(m) {
-                document.getElementById('det_vendas').innerText = fmt(m.vendas || 0);
-                document.getElementById('det_gastos').innerText = fmt(m.gastos || 0);
-                document.getElementById('det_lucro').innerText = fmt(m.lucro || 0);
-                document.getElementById('det_itens').innerText = `${m.itens || 0} ITENS`;
+                document.getElementById('det_vendas').innerText = fmt(m.vendas);
+                document.getElementById('det_gastos').innerText = fmt(m.gastos);
+                document.getElementById('det_lucro').innerText = fmt(m.lucro);
+                document.getElementById('det_itens').innerText = `${m.itens} ITENS`;
             }
         }
 
         document.getElementById('seletor_mes').addEventListener('change', (e) => atualizarDetalhe(e.target.value));
         
-        // Inicialização
         initDash();
-        // Refresh a cada 60s
         setInterval(initDash, 60000);
     </script>
 </body>
