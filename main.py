@@ -9,7 +9,6 @@ from supabase import create_client, Client
 
 app = FastAPI()
 
-# Configuração de Caminhos Absolutos
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
@@ -25,9 +24,8 @@ async def api_status():
         tz_local = pytz.timezone('America/Sao_Paulo')
         agora = datetime.now(tz_local)
         
-        # LGPD: Seleciona apenas o estritamente necessário. 
-        # AJUSTADO: Nome da coluna alterado para 'dados_do_comprador' conforme solicitado.
-        res_v = supabase.table("vendas").select("carimbo_data_hora, valor, produto, dados_do_comprador").execute()
+        # LGPD: Seleciona apenas o estritamente necessário
+        res_v = supabase.table("vendas").select("carimbo_data_hora, valor, produto").execute()
         res_d = supabase.table("despesas").select("carimbo_data_hora, valor").execute() 
 
         df_v = pd.DataFrame(res_v.data)
@@ -49,20 +47,7 @@ async def api_status():
             qtd = int(contar_unidades_reais(subset)) if is_venda else len(subset)
             return valor, qtd
 
-        # Lógica das 5 últimas vendas do dia
-        ultimas_vendas = []
-        if not df_v.empty:
-            df_hoje = df_v[df_v['dt'].dt.date == agora.date()].sort_values(by='dt', ascending=False).head(5)
-            for _, row in df_hoje.iterrows():
-                ultimas_vendas.append({
-                    # AJUSTADO: Lendo da chave correta 'dados_do_comprador'
-                    "comprador": str(row.get('dados_do_comprador', 'S/N')),
-                    "produto": str(row['produto'])[:25] + '..' if len(str(row['produto'])) > 25 else str(row['produto']),
-                    "valor": float(row['valor']),
-                    "data": row['dt'].strftime("%H:%M")
-                })
-
-        # Cálculos de tempo (KPIs)
+        # Cálculos de tempo
         v_h, q_h = processar_dados(df_v, df_v['dt'].dt.date == agora.date(), True)
         d_h, _ = processar_dados(df_d, df_d['dt'].dt.date == agora.date())
         
@@ -71,6 +56,18 @@ async def api_status():
         
         v_a, q_a = processar_dados(df_v, df_v['dt'].dt.year == agora.year, True)
         d_a, _ = processar_dados(df_d, df_d['dt'].dt.year == agora.year)
+
+        # LÓGICA DAS 5 ÚLTIMAS VENDAS DO DIA
+        ultimas_vendas = []
+        if not df_v.empty:
+            # Filtramos as vendas de hoje e ordenamos pela mais recente
+            df_hoje = df_v[df_v['dt'].dt.date == agora.date()].sort_values(by='dt', ascending=False).head(5)
+            for _, row in df_hoje.iterrows():
+                ultimas_vendas.append({
+                    "produto": str(row['produto'])[:30] + '...' if len(str(row['produto'])) > 30 else str(row['produto']),
+                    "valor": float(row['valor']),
+                    "data": row['dt'].strftime("%H:%M") # Apenas hora:minuto para o PWA ficar limpo
+                })
 
         meses_nomes = {1:"Jan", 2:"Fev", 3:"Mar", 4:"Abr", 5:"Mai", 6:"Jun", 7:"Jul", 8:"Ago", 9:"Set", 10:"Out", 11:"Nov", 12:"Dez"}
         filtros = []
@@ -84,14 +81,14 @@ async def api_status():
             "diario": {"vendas": v_h, "gastos": d_h, "lucro": v_h - d_h, "itens": q_h},
             "mensal": {"vendas": v_m, "gastos": d_m, "lucro": v_m - d_m, "itens": q_m},
             "anual": {"vendas": v_a, "gastos": d_a, "lucro": v_a - d_a, "itens": q_a},
-            "ultimas_vendas": ultimas_vendas,
+            "ultimas_vendas": ultimas_vendas, # O novo ingrediente do seu JSON
             "filtros_mensais": filtros,
             "atualizado_em": agora.strftime("%H:%M:%S")
         }
     except Exception as e:
-        # Se houver erro, retornamos para ajudar no teu planejamento estratégico de debug
         return {"erro": str(e)}
 
+# ... Resto das rotas (/manifest.json, /sw.js, /)
 @app.get("/manifest.json")
 async def get_manifest(): return FileResponse(os.path.join(BASE_DIR, "manifest.json"))
 
