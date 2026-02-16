@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de vendas</title>
+    <title>Gestão de Vendas - Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -19,6 +19,10 @@
             background-size: 1rem; 
             padding-right: 2rem; 
         }
+        /* Scrollbar customizada para não estragar o layout dark */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0f0f0f; }
+        ::-webkit-scrollbar-thumb { background: #2d2d2d; border-radius: 10px; }
     </style>
 </head>
 <body class="p-4 max-w-4xl mx-auto mb-10">
@@ -75,6 +79,23 @@
         </div>
     </div>
 
+    <section class="card-glass p-6 mb-8">
+        <h2 class="text-[10px] font-bold text-gray-500 uppercase mb-4">Últimas 5 Vendas Realizadas</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="text-gray-600 border-b border-gray-800 uppercase tracking-wider">
+                        <th class="pb-3 font-bold">Produto</th>
+                        <th class="pb-3 font-bold text-right">Valor</th>
+                        <th class="pb-3 font-bold text-right">Data/Hora</th>
+                    </tr>
+                </thead>
+                <tbody id="lista_ultimas_vendas" class="divide-y divide-gray-800/50">
+                    </tbody>
+            </table>
+        </div>
+    </section>
+
     <section class="card-glass p-6">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xs font-bold text-gray-400 uppercase">Histórico Detalhado</h2>
@@ -114,6 +135,7 @@
 
                 document.getElementById('timestamp').innerText = d.atualizado_em;
 
+                // Atualizar Cards Principais
                 const cards = ['diario', 'mensal', 'anual'];
                 cards.forEach(p => {
                     document.getElementById(`v_${p}`).innerText = fmt(d[p].vendas);
@@ -122,8 +144,11 @@
                     document.getElementById(`q_${p}`).innerText = d[p].itens;
                 });
 
+                // Atualizar Últimas Vendas
+                renderUltimasVendas(d.ultimas_vendas || []);
+
+                // Atualizar Gráficos e Filtros
                 dadosMensais = d.filtros_mensais;
-                
                 const sel = document.getElementById('seletor_mes');
                 if(sel.options.length === 0) {
                     sel.innerHTML = dadosMensais.map(m => `<option value="${m.id}">${m.mes}</option>`).join('');
@@ -135,6 +160,22 @@
                 renderBarras(dadosMensais);
 
             } catch (e) { console.error("Erro no Dashboard:", e); }
+        }
+
+        function renderUltimasVendas(vendas) {
+            const container = document.getElementById('lista_ultimas_vendas');
+            if (vendas.length === 0) {
+                container.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-gray-600">Nenhuma venda recente</td></tr>';
+                return;
+            }
+
+            container.innerHTML = vendas.slice(0, 5).map(v => `
+                <tr class="hover:bg-white/5 transition-colors group">
+                    <td class="py-3 font-semibold text-gray-300 group-hover:text-white">${v.produto}</td>
+                    <td class="py-3 text-right text-emerald-500 font-mono font-bold">${fmt(v.valor)}</td>
+                    <td class="py-3 text-right text-gray-600 font-mono text-[10px]">${v.data}</td>
+                </tr>
+            `).join('');
         }
 
         function renderPizza(lucro, gastos) {
@@ -150,7 +191,7 @@
                         data: [lucro, gastos],
                         backgroundColor: ['#10b981', '#ef4444'],
                         borderWidth: 0,
-                        cutout: '70%'
+                        cutout: '75%'
                     }]
                 },
                 options: {
@@ -177,7 +218,7 @@
                     datasets: [{
                         data: meses.map(m => m.vendas),
                         backgroundColor: '#3b82f6',
-                        borderRadius: 5
+                        borderRadius: 4
                     }]
                 },
                 options: {
@@ -189,9 +230,7 @@
                     plugins: {
                         legend: { display: false },
                         datalabels: {
-                            anchor: 'end',
-                            align: 'top',
-                            color: '#3b82f6',
+                            anchor: 'end', align: 'top', color: '#3b82f6',
                             font: { weight: 'bold', size: 9 },
                             formatter: (val) => val > 0 ? 'R$' + Math.round(val) : ''
                         }
