@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytics Estratégico</title>
+    <title>Delícias da JU</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -19,12 +19,14 @@
             background-size: 1rem; 
             padding-right: 2rem; 
         }
+        /* Previne quebras de layout em nomes muito grandes */
+        .truncate-custom { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
     </style>
 </head>
 <body class="p-4 max-w-4xl mx-auto mb-10">
     <header class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-xl font-black tracking-tight text-white uppercase">Analytics Estratégico</h1>
+            <h1 class="text-xl font-black tracking-tight text-white uppercase">Delícias da JU</h1>
             <p class="text-gray-500 text-[10px] uppercase tracking-widest">Vendas</p>
         </div>
         <div id="timestamp" class="text-emerald-500 font-mono text-sm tracking-tighter">--:--:--</div>
@@ -128,49 +130,63 @@
                 const d = await r.json();
                 if(d.erro) throw new Error(d.erro);
 
-                document.getElementById('timestamp').innerText = d.updated_at || d.atualizado_em;
+                // Atualiza o timestamp (checa os dois nomes de chave para evitar bugs)
+                document.getElementById('timestamp').innerText = d.atualizado_em || d.updated_at || "--:--:--";
 
                 const periods = ['diario', 'mensal', 'anual'];
                 periods.forEach(p => {
-                    document.getElementById(`v_${p}`).innerText = fmt(d[p].vendas);
-                    document.getElementById(`g_${p}`).innerText = fmt(d[p].gastos);
-                    document.getElementById(`l_${p}`).innerText = fmt(d[p].lucro);
-                    document.getElementById(`q_${p}`).innerText = d[p].itens;
+                    if(d[p]) {
+                        document.getElementById(`v_${p}`).innerText = fmt(d[p].vendas || 0);
+                        document.getElementById(`g_${p}`).innerText = fmt(d[p].gastos || 0);
+                        document.getElementById(`l_${p}`).innerText = fmt(d[p].lucro || 0);
+                        document.getElementById(`q_${p}`).innerText = d[p].itens || 0;
+                    }
                 });
 
+                // Renderiza a lista de vendas
                 renderUltimasVendas(d.ultimas_vendas || []);
                 
-                dadosMensais = d.filtros_mensais;
+                // Configura o seletor de meses apenas na primeira carga
+                dadosMensais = d.filtros_mensais || [];
                 const sel = document.getElementById('seletor_mes');
-                if(sel.options.length === 0) {
+                if(sel && sel.options.length === 0 && dadosMensais.length > 0) {
                     sel.innerHTML = dadosMensais.map(m => `<option value="${m.id}">${m.mes}</option>`).join('');
                     sel.value = new Date().getMonth() + 1;
                 }
-                atualizarDetalhe(sel.value);
-                renderPizza(d.anual.lucro, d.anual.gastos);
-                renderBarras(dadosMensais);
+                
+                if(sel && sel.value) atualizarDetalhe(sel.value);
+                
+                // Gráficos
+                if(d.anual) renderPizza(d.anual.lucro || 0, d.anual.gastos || 0);
+                if(dadosMensais.length > 0) renderBarras(dadosMensais);
 
-            } catch (e) { console.error("Erro Dashboard:", e); }
+            } catch (e) { 
+                console.error("Erro no Dashboard:", e);
+                // Feedback visual de erro para facilitar o seu debug estratégico
+                document.getElementById('timestamp').innerText = "ERRO API";
+                document.getElementById('timestamp').classList.replace('text-emerald-500', 'text-red-500');
+            }
         }
 
         function renderUltimasVendas(vendas) {
             const container = document.getElementById('lista_ultimas_vendas');
-            if (!vendas.length) {
-                container.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-600">Sem vendas recentes</td></tr>';
+            if (!vendas || vendas.length === 0) {
+                container.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-gray-600 italic">Nenhuma venda registrada hoje.</td></tr>';
                 return;
             }
             container.innerHTML = vendas.map(v => `
                 <tr class="hover:bg-white/5 transition-colors group">
-                    <td class="py-3 text-emerald-400 font-medium">${v.comprador}</td>
-                    <td class="py-3 text-gray-400">${v.produto}</td>
-                    <td class="py-3 text-right text-white font-mono font-bold">${fmt(v.valor)}</td>
-                    <td class="py-3 text-right text-gray-600 font-mono text-[10px]">${v.data}</td>
+                    <td class="py-4 text-emerald-400 font-bold truncate-custom">${v.comprador || '---'}</td>
+                    <td class="py-4 text-gray-400 text-[10px]">${v.produto || 'Produto'}</td>
+                    <td class="py-4 text-right text-white font-mono font-bold">${fmt(v.valor || 0)}</td>
+                    <td class="py-4 text-right text-gray-600 font-mono text-[10px]">${v.data || '--:--'}</td>
                 </tr>
             `).join('');
         }
 
         function renderPizza(lucro, gastos) {
             const ctx = document.getElementById('chartPizza');
+            if(!ctx) return;
             const total = lucro + gastos;
             if(pizzaChart) pizzaChart.destroy();
             pizzaChart = new Chart(ctx, {
@@ -180,6 +196,8 @@
                     datasets: [{ data: [lucro, gastos], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0, cutout: '75%' }]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 15 } },
                         datalabels: { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (val) => total > 0 ? ((val/total)*100).toFixed(1) + '%' : '0%' }
@@ -190,6 +208,7 @@
 
         function renderBarras(meses) {
             const ctx = document.getElementById('chartBarras');
+            if(!ctx) return;
             if(barChart) barChart.destroy();
             barChart = new Chart(ctx, {
                 type: 'bar',
@@ -198,6 +217,8 @@
                     datasets: [{ data: meses.map(m => m.vendas), backgroundColor: '#3b82f6', borderRadius: 4 }]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     layout: { padding: { top: 20 } },
                     scales: { y: { display: false }, x: { ticks: { color: '#555', font: { size: 10 } }, grid: { display: false } } },
                     plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', color: '#3b82f6', font: { weight: 'bold', size: 9 }, formatter: (val) => val > 0 ? 'R$' + Math.round(val) : '' } }
@@ -208,15 +229,18 @@
         function atualizarDetalhe(id) {
             const m = dadosMensais.find(x => x.id == id);
             if(m) {
-                document.getElementById('det_vendas').innerText = fmt(m.vendas);
-                document.getElementById('det_gastos').innerText = fmt(m.gastos);
-                document.getElementById('det_lucro').innerText = fmt(m.lucro);
-                document.getElementById('det_itens').innerText = `${m.itens} ITENS`;
+                document.getElementById('det_vendas').innerText = fmt(m.vendas || 0);
+                document.getElementById('det_gastos').innerText = fmt(m.gastos || 0);
+                document.getElementById('det_lucro').innerText = fmt(m.lucro || 0);
+                document.getElementById('det_itens').innerText = `${m.itens || 0} ITENS`;
             }
         }
 
         document.getElementById('seletor_mes').addEventListener('change', (e) => atualizarDetalhe(e.target.value));
+        
+        // Inicialização
         initDash();
+        // Refresh a cada 60s
         setInterval(initDash, 60000);
     </script>
 </body>
