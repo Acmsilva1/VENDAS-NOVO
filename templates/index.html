@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Vendas - Analytics</title>
+    <title>Gestão de Vendas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -19,7 +19,6 @@
             background-size: 1rem; 
             padding-right: 2rem; 
         }
-        /* Scrollbar customizada para não estragar o layout dark */
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #0f0f0f; }
         ::-webkit-scrollbar-thumb { background: #2d2d2d; border-radius: 10px; }
@@ -28,7 +27,7 @@
 <body class="p-4 max-w-4xl mx-auto mb-10">
     <header class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-xl font-black tracking-tight text-white uppercase">Analytics Estratégico</h1>
+            <h1 class="text-xl font-black tracking-tight text-white uppercase">Vendas</h1>
             <p class="text-gray-500 text-[10px] uppercase tracking-widest">Vendas</p>
         </div>
         <div id="timestamp" class="text-emerald-500 font-mono text-sm tracking-tighter">--:--:--</div>
@@ -82,16 +81,16 @@
     <section class="card-glass p-6 mb-8">
         <h2 class="text-[10px] font-bold text-gray-500 uppercase mb-4">Últimas 5 Vendas Realizadas</h2>
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full text-left text-[11px]">
                 <thead>
                     <tr class="text-gray-600 border-b border-gray-800 uppercase tracking-wider">
                         <th class="pb-3 font-bold">Produto</th>
+                        <th class="pb-3 font-bold">Comprador</th>
                         <th class="pb-3 font-bold text-right">Valor</th>
-                        <th class="pb-3 font-bold text-right">Data/Hora</th>
+                        <th class="pb-3 font-bold text-right">Hora</th>
                     </tr>
                 </thead>
-                <tbody id="lista_ultimas_vendas" class="divide-y divide-gray-800/50">
-                    </tbody>
+                <tbody id="lista_ultimas_vendas" class="divide-y divide-gray-800/50"></tbody>
             </table>
         </div>
     </section>
@@ -121,7 +120,6 @@
 
     <script>
         Chart.register(ChartDataLabels);
-
         let dadosMensais = [];
         let pizzaChart, barChart;
         const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -130,24 +128,15 @@
             try {
                 const r = await fetch('/api/status');
                 const d = await r.json();
-                
                 if(d.erro) throw new Error(d.erro);
-
                 document.getElementById('timestamp').innerText = d.atualizado_em;
-
-                // Atualizar Cards Principais
-                const cards = ['diario', 'mensal', 'anual'];
-                cards.forEach(p => {
+                ['diario', 'mensal', 'anual'].forEach(p => {
                     document.getElementById(`v_${p}`).innerText = fmt(d[p].vendas);
                     document.getElementById(`g_${p}`).innerText = fmt(d[p].gastos);
                     document.getElementById(`l_${p}`).innerText = fmt(d[p].lucro);
                     document.getElementById(`q_${p}`).innerText = d[p].itens;
                 });
-
-                // Atualizar Últimas Vendas
                 renderUltimasVendas(d.ultimas_vendas || []);
-
-                // Atualizar Gráficos e Filtros
                 dadosMensais = d.filtros_mensais;
                 const sel = document.getElementById('seletor_mes');
                 if(sel.options.length === 0) {
@@ -155,23 +144,21 @@
                     sel.value = new Date().getMonth() + 1;
                 }
                 atualizarDetalhe(sel.value);
-
                 renderPizza(d.anual.lucro, d.anual.gastos);
                 renderBarras(dadosMensais);
-
             } catch (e) { console.error("Erro no Dashboard:", e); }
         }
 
         function renderUltimasVendas(vendas) {
             const container = document.getElementById('lista_ultimas_vendas');
             if (vendas.length === 0) {
-                container.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-gray-600">Nenhuma venda recente</td></tr>';
+                container.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-600">Nenhuma venda hoje</td></tr>';
                 return;
             }
-
-            container.innerHTML = vendas.slice(0, 5).map(v => `
+            container.innerHTML = vendas.map(v => `
                 <tr class="hover:bg-white/5 transition-colors group">
                     <td class="py-3 font-semibold text-gray-300 group-hover:text-white">${v.produto}</td>
+                    <td class="py-3 text-gray-500 italic truncate max-w-[120px]">${v.comprador}</td>
                     <td class="py-3 text-right text-emerald-500 font-mono font-bold">${fmt(v.valor)}</td>
                     <td class="py-3 text-right text-gray-600 font-mono text-[10px]">${v.data}</td>
                 </tr>
@@ -182,26 +169,16 @@
             const ctx = document.getElementById('chartPizza');
             const total = lucro + gastos;
             if(pizzaChart) pizzaChart.destroy();
-            
             pizzaChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Lucro', 'Gastos'],
-                    datasets: [{
-                        data: [lucro, gastos],
-                        backgroundColor: ['#10b981', '#ef4444'],
-                        borderWidth: 0,
-                        cutout: '75%'
-                    }]
+                    datasets: [{ data: [lucro, gastos], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0, cutout: '75%' }]
                 },
                 options: {
                     plugins: {
                         legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 20 } },
-                        datalabels: {
-                            color: '#fff',
-                            font: { weight: 'bold', size: 11 },
-                            formatter: (val) => total > 0 ? ((val/total)*100).toFixed(1) + '%' : '0%'
-                        }
+                        datalabels: { color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (val) => total > 0 ? ((val/total)*100).toFixed(1) + '%' : '0%' }
                     }
                 }
             });
@@ -210,31 +187,16 @@
         function renderBarras(meses) {
             const ctx = document.getElementById('chartBarras');
             if(barChart) barChart.destroy();
-            
             barChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: meses.map(m => m.mes.substring(0,3)),
-                    datasets: [{
-                        data: meses.map(m => m.vendas),
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 4
-                    }]
+                    datasets: [{ data: meses.map(m => m.vendas), backgroundColor: '#3b82f6', borderRadius: 4 }]
                 },
                 options: {
                     layout: { padding: { top: 25 } },
-                    scales: { 
-                        y: { display: false },
-                        x: { ticks: { color: '#555', font: { size: 10 } }, grid: { display: false } }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        datalabels: {
-                            anchor: 'end', align: 'top', color: '#3b82f6',
-                            font: { weight: 'bold', size: 9 },
-                            formatter: (val) => val > 0 ? 'R$' + Math.round(val) : ''
-                        }
-                    }
+                    scales: { y: { display: false }, x: { ticks: { color: '#555', font: { size: 10 } }, grid: { display: false } } },
+                    plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', color: '#3b82f6', font: { weight: 'bold', size: 9 }, formatter: (val) => val > 0 ? 'R$' + Math.round(val) : '' } }
                 }
             });
         }
@@ -250,7 +212,6 @@
         }
 
         document.getElementById('seletor_mes').addEventListener('change', (e) => atualizarDetalhe(e.target.value));
-        
         initDash();
         setInterval(initDash, 60000);
     </script>
