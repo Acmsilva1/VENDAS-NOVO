@@ -1,21 +1,22 @@
-const CACHE_NAME = 'dash-transparencia-v13;
-const ASSETS = [
-  '/',
-  'https://cdn.jsdelivr.net/npm/chart.js' // Caso você decida voltar com os gráficos
-];
-
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
-});
-
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((response) => {
-      return response || fetch(e.request);
-    })
-  );
-});
+{
+  "name": "André Financeiro Pro",
+  "short_name": "Vendas",
+  "description": "Dashboard de Ganhos e Custos em Tempo Real",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1162/1162456.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1162/1162456.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
