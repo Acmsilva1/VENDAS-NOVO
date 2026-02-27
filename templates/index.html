@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard André - Financeiro Pro</title>
+    <title>Dashboard André - Financeiro</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,10 +18,14 @@
 </head>
 <body class="p-4 pb-20">
 
+    <div id="loader" class="fixed inset-0 bg-black flex items-center justify-center z-50">
+        <div class="text-emerald-500 animate-spin text-4xl"><i class="fas fa-circle-notch"></i></div>
+    </div>
+
     <div class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-bold text-white">Resumo Financeiro</h1>
-            <p class="text-xs text-gray-500">Última sincronização: <span id="u_time">--:--</span></p>
+            <p class="text-xs text-gray-500">Sinc: <span id="u_time">--:--</span></p>
         </div>
         <div class="bg-emerald-500/10 p-3 rounded-xl">
             <i class="fas fa-wallet text-emerald-500 text-xl"></i>
@@ -36,11 +40,11 @@
         
         <div class="grid grid-cols-2 gap-4">
             <div class="card-glass p-4">
-                <p class="text-gray-400 text-xs">Custos Totais</p>
+                <p class="text-gray-400 text-xs">Custos</p>
                 <p class="text-lg font-bold text-custo" id="m_custo">R$ 0,00</p>
             </div>
             <div class="card-glass p-4">
-                <p class="text-gray-400 text-xs">Lucro Líquido</p>
+                <p class="text-gray-400 text-xs">Lucro Real</p>
                 <p class="text-lg font-bold text-lucro" id="m_lucro">R$ 0,00</p>
             </div>
         </div>
@@ -48,26 +52,26 @@
 
     <div class="card-glass p-4 mb-6">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-sm">Evolução por Mês</h3>
-            <select id="seletor_mes" class="bg-gray-800 text-emerald-500 text-xs font-bold outline-none border border-gray-700 rounded-lg px-3 py-1">
-                </select>
+            <h3 class="font-bold text-sm">Histórico</h3>
+            <select id="seletor_mes" class="bg-gray-800 text-emerald-500 text-xs font-bold outline-none rounded-lg px-2 py-1 border border-gray-700">
+            </select>
         </div>
         <canvas id="chartBarras" height="150"></canvas>
     </div>
 
-    <div id="detalhe_container" class="card-glass p-5">
-        <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Performance Detalhada</h3>
+    <div class="card-glass p-5">
+        <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Detalhes</h3>
         <div class="space-y-4">
             <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-400">Total Ganho</span>
-                <span id="det_ganho" class="font-bold text-white text-lg">R$ 0,00</span>
+                <span class="text-sm text-gray-400">Ganho</span>
+                <span id="det_ganho" class="font-bold text-white">R$ 0,00</span>
             </div>
             <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-400">Total Custos</span>
-                <span id="det_custo" class="font-bold text-custo text-lg">R$ 0,00</span>
+                <span class="text-sm text-gray-400">Custos</span>
+                <span id="det_custo" class="font-bold text-custo">R$ 0,00</span>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-sm font-bold text-emerald-500 uppercase">Lucro Real</span>
+                <span class="text-sm font-bold text-emerald-500">Lucro</span>
                 <span id="det_lucro" class="font-bold text-emerald-500 text-2xl">R$ 0,00</span>
             </div>
         </div>
@@ -78,46 +82,38 @@
         let dadosMensais = [];
         let barChart = null;
 
-        const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const fmt = (v) => (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
         async function init() {
-            console.log("Tentando ligar os motores do GAS...");
             try {
+                console.log("Iniciando Fetch...");
                 const response = await fetch(API_URL);
-                if (!response.ok) throw new Error("Erro na rede");
+                if (!response.ok) throw new Error("Erro na rede ou GAS fora do ar");
                 
                 const data = await response.json();
-                console.log("Dados recebidos com sucesso:", data);
+                console.log("Dados carregados:", data);
                 
-                // Mapeamento dos campos do JSON recebido
-                document.getElementById('u_time').innerText = data.atualizado_em;
+                document.getElementById('u_time').innerText = data.atualizado_em || '--:--';
                 document.getElementById('m_ganho').innerText = fmt(data.mensal.ganho);
                 document.getElementById('m_custo').innerText = fmt(data.mensal.custo);
                 document.getElementById('m_lucro').innerText = fmt(data.mensal.lucro);
 
-                dadosMensais = data.filtros_mensais;
+                dadosMensais = data.filtros_mensais || [];
                 
                 const seletor = document.getElementById('seletor_mes');
                 seletor.innerHTML = dadosMensais.map(m => `<option value="${m.id}">${m.mes}</option>`).join('');
                 
-                // Seleciona o mês atual automaticamente
-                const mesAtualReal = new Date().getMonth() + 1;
-                seletor.value = mesAtualReal;
+                const mesAtual = new Date().getMonth() + 1;
+                seletor.value = mesAtual;
 
                 renderChart(dadosMensais);
-                atualizarDetalhe(mesAtualReal);
+                atualizarDetalhe(mesAtual);
+                
+                document.getElementById('loader').style.display = 'none';
 
             } catch (err) {
-                console.error("ERRO NO DEPLOY DO FRONTEND:", err);
-                // Exibe erro visual se o GAS falhar
-                document.body.innerHTML = `
-                    <div class="p-10 text-center">
-                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                        <h2 class="text-white font-bold">Erro de Conexão</h2>
-                        <p class="text-gray-500 text-sm mt-2">${err.message}</p>
-                        <button onclick="location.reload()" class="mt-6 bg-emerald-500 px-4 py-2 rounded-lg text-black font-bold">Tentar Novamente</button>
-                    </div>
-                `;
+                console.error("Falha fatal:", err);
+                document.body.innerHTML = `<div class="p-10 text-center text-red-500 font-bold">Erro: ${err.message}<br><button onclick="location.reload()" class="bg-white text-black p-2 mt-4 rounded">Tentar de Novo</button></div>`;
             }
         }
 
@@ -139,10 +135,7 @@
                 options: {
                     responsive: true,
                     plugins: { legend: { display: false } },
-                    scales: { 
-                        y: { display: false },
-                        x: { grid: { display: false }, ticks: { color: '#888' } }
-                    }
+                    scales: { y: { display: false }, x: { ticks: { color: '#888' }, grid: { display: false } } }
                 }
             });
         }
@@ -158,12 +151,10 @@
 
         document.getElementById('seletor_mes').addEventListener('change', (e) => atualizarDetalhe(e.target.value));
 
-        // Registro do Service Worker para o PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker ativo para André!'))
-                    .catch(err => console.log('Erro no Service Worker:', err));
+                // Registro relativo para GitHub Pages
+                navigator.serviceWorker.register('./sw.js').catch(e => console.log("SW Fail"));
             });
         }
 
