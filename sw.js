@@ -1,22 +1,40 @@
-{
-  "name": "André Financeiro Pro",
-  "short_name": "Vendas",
-  "description": "Dashboard de Ganhos e Custos em Tempo Real",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#0f0f0f",
-  "theme_color": "#10b981",
-  "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/1162/1162456.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/1162/1162456.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
-}
+const CACHE_NAME = 'fin-dash-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  'https://cdn.tailwindcss.com',
+  'https://cdn.jsdelivr.net/npm/chart.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+];
+
+// Instalação e Cache
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('Arquitetura de Cache pronta, André!');
+      return cache.addAll(ASSETS);
+    })
+  );
+});
+
+// Ativação e limpeza de caches antigos
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      );
+    })
+  );
+});
+
+// Estratégia: Network First (Tenta buscar na rede, se falhar, usa o cache)
+// Ideal para dados financeiros que mudam toda hora
+self.addEventListener('fetch', (e) => {
+  e.respondWith(
+    fetch(e.request).catch(() => {
+      return caches.match(e.request);
+    })
+  );
+});
