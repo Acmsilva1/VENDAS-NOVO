@@ -1,16 +1,17 @@
 {
-  "name": "Dash Estratégico André",
-  "short_name": "DashVendas",
-  "description": "Monitoramento de Vendas e Gastos em Tempo Real",
-  "start_url": "/",
+  "name": "André Financeiro Pro",
+  "short_name": "FinDash",
+  "description": "Dashboard de Ganhos e Custos em Tempo Real",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#121212",
-  "theme_color": "#00d1b2",
+  "background_color": "#0f0f0f",
+  "theme_color": "#10b981",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1162/1162456.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1162/1162456.png",
