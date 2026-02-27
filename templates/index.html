@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Vendas</title>
+    <title>Dashboard André - Financeiro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -11,192 +11,119 @@
     <style>
         body { background-color: #0f0f0f; color: #e5e7eb; font-family: 'Inter', sans-serif; }
         .card-glass { background: #1a1a1a; border: 1px solid #2d2d2d; border-radius: 1rem; }
-        select { 
-            appearance: none; 
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='C19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); 
-            background-repeat: no-repeat; 
-            background-position: right 0.5rem center; 
-            background-size: 1rem; 
-            padding-right: 2rem; 
-        }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: #0f0f0f; }
-        ::-webkit-scrollbar-thumb { background: #2d2d2d; border-radius: 10px; }
+        .text-lucro { color: #10b981; }
+        .text-custo { color: #ef4444; }
     </style>
 </head>
-<body class="p-4 max-w-4xl mx-auto mb-10">
-    <header class="flex justify-between items-center mb-8">
+<body class="p-4 pb-20">
+
+    <div class="flex justify-between items-center mb-6">
         <div>
-            <h1 class="text-xl font-black tracking-tight text-white uppercase">Vendas</h1>
-            <p class="text-gray-500 text-[10px] uppercase tracking-widest">Vendas</p>
+            <h1 class="text-2xl font-bold">Resumo Financeiro</h1>
+            <p class="text-xs text-gray-500">Atualizado em: <span id="u_time">--:--</span></p>
         </div>
-        <div id="timestamp" class="text-emerald-500 font-mono text-sm tracking-tighter">--:--:--</div>
-    </header>
+        <div class="bg-emerald-500/10 p-2 rounded-lg">
+            <i class="fas fa-wallet text-emerald-500"></i>
+        </div>
+    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div class="card-glass p-5">
-            <p class="text-[10px] text-gray-500 font-bold uppercase mb-2">Hoje</p>
-            <div id="v_diario" class="text-2xl font-bold text-white">R$ 0,00</div>
-            <div class="text-[10px] text-blue-400 mt-1 mb-3 font-mono"><span id="q_diario">0</span> ITENS</div>
-            <div class="flex justify-between text-[10px] border-t border-gray-800 pt-3">
-                <span class="text-red-500 uppercase">Gasto: <span id="g_diario">R$ 0,00</span></span>
-                <span class="text-emerald-500 font-bold" id="l_diario">R$ 0,00</span>
-            </div>
+    <div class="grid grid-cols-1 gap-4 mb-6">
+        <div class="card-glass p-4">
+            <p class="text-gray-400 text-sm">Ganhos do Mês</p>
+            <h2 class="text-3xl font-bold text-white" id="m_ganho">R$ 0,00</h2>
         </div>
-        <div class="card-glass p-5">
-            <p class="text-[10px] text-gray-500 font-bold uppercase mb-2">Mês Atual</p>
-            <div id="v_mensal" class="text-2xl font-bold text-white">R$ 0,00</div>
-            <div class="text-[10px] text-blue-400 mt-1 mb-3 font-mono"><span id="q_mensal">0</span> ITENS</div>
-            <div class="flex justify-between text-[10px] border-t border-gray-800 pt-3">
-                <span class="text-red-500 uppercase">Gasto: <span id="g_mensal">R$ 0,00</span></span>
-                <span class="text-emerald-500 font-bold" id="l_mensal">R$ 0,00</span>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="card-glass p-4">
+                <p class="text-gray-400 text-xs">Custos (Mês)</p>
+                <p class="text-lg font-semibold text-custo" id="m_custo">R$ 0,00</p>
             </div>
-        </div>
-        <div class="card-glass p-5 border-emerald-900/20">
-            <p class="text-[10px] text-gray-500 font-bold uppercase mb-2">Ano Total</p>
-            <div id="v_anual" class="text-2xl font-bold text-white">R$ 0,00</div>
-            <div class="text-[10px] text-blue-400 mt-1 mb-3 font-mono"><span id="q_anual">0</span> ITENS</div>
-            <div class="flex justify-between text-[10px] border-t border-gray-800 pt-3">
-                <span class="text-red-500 uppercase">Gasto: <span id="g_anual">R$ 0,00</span></span>
-                <span class="text-emerald-500 font-bold" id="l_anual">R$ 0,00</span>
+            <div class="card-glass p-4">
+                <p class="text-gray-400 text-xs">Lucro Real</p>
+                <p class="text-lg font-semibold text-lucro" id="m_lucro">R$ 0,00</p>
             </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div class="card-glass p-6">
-            <h2 class="text-[10px] font-bold text-gray-500 uppercase mb-4 text-center">Composição Anual (%)</h2>
-            <div class="h-56 flex justify-center">
-                <canvas id="chartPizza"></canvas>
-            </div>
+    <div class="card-glass p-4 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-sm">Evolução Mensal (Ganhos)</h3>
+            <select id="seletor_mes" class="bg-transparent text-emerald-500 text-xs font-bold outline-none"></select>
         </div>
-        <div class="card-glass p-6">
-            <h2 class="text-[10px] font-bold text-gray-500 uppercase mb-4 text-center">Vendas por Mês (R$)</h2>
-            <div class="h-56">
-                <canvas id="chartBarras"></canvas>
+        <canvas id="chartBarras" height="150"></canvas>
+    </div>
+
+    <div id="detalhe_container" class="card-glass p-4">
+        <h3 class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Performance do Mês Selecionado</h3>
+        <div class="space-y-3">
+            <div class="flex justify-between border-b border-gray-800 pb-2">
+                <span class="text-sm">Total Ganhos:</span>
+                <span id="det_ganho" class="font-bold">R$ 0,00</span>
+            </div>
+            <div class="flex justify-between border-b border-gray-800 pb-2">
+                <span class="text-sm">Total Custos:</span>
+                <span id="det_custo" class="font-bold text-custo">R$ 0,00</span>
+            </div>
+            <div class="flex justify-between pt-1">
+                <span class="text-sm font-bold text-emerald-500">Lucro Líquido:</span>
+                <span id="det_lucro" class="font-bold text-emerald-500 text-lg">R$ 0,00</span>
             </div>
         </div>
     </div>
-
-    <section class="card-glass p-6 mb-8">
-        <h2 class="text-[10px] font-bold text-gray-500 uppercase mb-4">Últimas 5 Vendas Realizadas</h2>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-[11px]">
-                <thead>
-                    <tr class="text-gray-600 border-b border-gray-800 uppercase tracking-wider">
-                        <th class="pb-3 font-bold">Produto</th>
-                        <th class="pb-3 font-bold">Comprador</th>
-                        <th class="pb-3 font-bold text-right">Valor</th>
-                        <th class="pb-3 font-bold text-right">Hora</th>
-                    </tr>
-                </thead>
-                <tbody id="lista_ultimas_vendas" class="divide-y divide-gray-800/50"></tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="card-glass p-6">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xs font-bold text-gray-400 uppercase">Histórico Detalhado</h2>
-            <select id="seletor_mes" class="bg-black border border-gray-700 text-xs rounded-lg px-4 py-1 outline-none text-emerald-500 font-bold"></select>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-black/40 p-4 rounded-lg border border-gray-800">
-                <p class="text-[9px] text-gray-500 uppercase mb-1">Vendas no Mês</p>
-                <p id="det_vendas" class="text-lg font-bold text-white">R$ 0,00</p>
-                <p id="det_itens" class="text-[9px] text-blue-400 font-mono">0 ITENS</p>
-            </div>
-            <div class="bg-black/40 p-4 rounded-lg border border-gray-800">
-                <p class="text-[9px] text-gray-500 uppercase mb-1">Gastos no Mês</p>
-                <p id="det_gastos" class="text-lg font-bold text-red-500">R$ 0,00</p>
-            </div>
-            <div class="bg-black/40 p-4 rounded-lg border border-emerald-900/30">
-                <p class="text-[9px] text-gray-500 uppercase mb-1">Lucro Líquido</p>
-                <p id="det_lucro" class="text-lg font-bold text-emerald-500">R$ 0,00</p>
-            </div>
-        </div>
-    </section>
 
     <script>
-        Chart.register(ChartDataLabels);
+        const API_URL = 'https://script.google.com/macros/s/AKfycbz46GD15sCw-jpmgsreKhWm_rSEe_wJ-4RUHGUXGz5DnJJ_HjQzIHgctC6VUuTO62Hfaw/exec';
         let dadosMensais = [];
-        let pizzaChart, barChart;
+        let barChart = null;
+
         const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-        async function initDash() {
+        async function init() {
             try {
-                const r = await fetch('/api/status');
-                const d = await r.json();
-                if(d.erro) throw new Error(d.erro);
-                document.getElementById('timestamp').innerText = d.atualizado_em;
-                ['diario', 'mensal', 'anual'].forEach(p => {
-                    document.getElementById(`v_${p}`).innerText = fmt(d[p].vendas);
-                    document.getElementById(`g_${p}`).innerText = fmt(d[p].gastos);
-                    document.getElementById(`l_${p}`).innerText = fmt(d[p].lucro);
-                    document.getElementById(`q_${p}`).innerText = d[p].itens;
-                });
-                renderUltimasVendas(d.ultimas_vendas || []);
-                dadosMensais = d.filtros_mensais;
-                const sel = document.getElementById('seletor_mes');
-                if(sel.options.length === 0) {
-                    sel.innerHTML = dadosMensais.map(m => `<option value="${m.id}">${m.mes}</option>`).join('');
-                    sel.value = new Date().getMonth() + 1;
-                }
-                atualizarDetalhe(sel.value);
-                renderPizza(d.anual.lucro, d.anual.gastos);
-                renderBarras(dadosMensais);
-            } catch (e) { console.error("Erro no Dashboard:", e); }
-        }
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                
+                // Preencher Dashboard Geral
+                document.getElementById('u_time').innerText = data.atualizado_em;
+                document.getElementById('m_ganho').innerText = fmt(data.mensal.ganho);
+                document.getElementById('m_custo').innerText = fmt(data.mensal.custo);
+                document.getElementById('m_lucro').innerText = fmt(data.mensal.lucro);
 
-        function renderUltimasVendas(vendas) {
-            const container = document.getElementById('lista_ultimas_vendas');
-            if (vendas.length === 0) {
-                container.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-600">Nenhuma venda hoje</td></tr>';
-                return;
+                dadosMensais = data.filtros_mensais;
+                
+                // Popular Seletor
+                const seletor = document.getElementById('seletor_mes');
+                seletor.innerHTML = dadosMensais.map(m => `<option value="${m.id}">${m.mes}</option>`).join('');
+                seletor.value = new Date().getMonth() + 1;
+
+                renderChart(dadosMensais);
+                atualizarDetalhe(seletor.value);
+
+            } catch (err) {
+                console.error("Erro ao carregar dados:", err);
             }
-            container.innerHTML = vendas.map(v => `
-                <tr class="hover:bg-white/5 transition-colors group">
-                    <td class="py-3 font-semibold text-gray-300 group-hover:text-white">${v.produto}</td>
-                    <td class="py-3 text-gray-500 italic truncate max-w-[120px]">${v.comprador}</td>
-                    <td class="py-3 text-right text-emerald-500 font-mono font-bold">${fmt(v.valor)}</td>
-                    <td class="py-3 text-right text-gray-600 font-mono text-[10px]">${v.data}</td>
-                </tr>
-            `).join('');
         }
 
-        function renderPizza(lucro, gastos) {
-            const ctx = document.getElementById('chartPizza');
-            const total = lucro + gastos;
-            if(pizzaChart) pizzaChart.destroy();
-            pizzaChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Lucro', 'Gastos'],
-                    datasets: [{ data: [lucro, gastos], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0, cutout: '75%' }]
-                },
-                options: {
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 20 } },
-                        datalabels: { color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (val) => total > 0 ? ((val/total)*100).toFixed(1) + '%' : '0%' }
-                    }
-                }
-            });
-        }
-
-        function renderBarras(meses) {
+        function renderChart(meses) {
             const ctx = document.getElementById('chartBarras');
             if(barChart) barChart.destroy();
+            
             barChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: meses.map(m => m.mes.substring(0,3)),
-                    datasets: [{ data: meses.map(m => m.vendas), backgroundColor: '#3b82f6', borderRadius: 4 }]
+                    datasets: [{ 
+                        label: 'Ganhos',
+                        data: meses.map(m => m.ganho), 
+                        backgroundColor: '#10b981', 
+                        borderRadius: 4 
+                    }]
                 },
                 options: {
-                    layout: { padding: { top: 25 } },
-                    scales: { y: { display: false }, x: { ticks: { color: '#555', font: { size: 10 } }, grid: { display: false } } },
-                    plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', color: '#3b82f6', font: { weight: 'bold', size: 9 }, formatter: (val) => val > 0 ? 'R$' + Math.round(val) : '' } }
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { display: false },
+                        x: { grid: { display: false }, ticks: { color: '#666' } }
+                    }
                 }
             });
         }
@@ -204,16 +131,15 @@
         function atualizarDetalhe(id) {
             const m = dadosMensais.find(x => x.id == id);
             if(m) {
-                document.getElementById('det_vendas').innerText = fmt(m.vendas);
-                document.getElementById('det_gastos').innerText = fmt(m.gastos);
+                document.getElementById('det_ganho').innerText = fmt(m.ganho);
+                document.getElementById('det_custo').innerText = fmt(m.custo);
                 document.getElementById('det_lucro').innerText = fmt(m.lucro);
-                document.getElementById('det_itens').innerText = `${m.itens} ITENS`;
             }
         }
 
         document.getElementById('seletor_mes').addEventListener('change', (e) => atualizarDetalhe(e.target.value));
-        initDash();
-        setInterval(initDash, 60000);
+
+        init();
     </script>
 </body>
 </html>
