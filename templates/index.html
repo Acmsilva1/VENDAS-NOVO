@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard André - Financeiro</title>
-    <link rel="manifest" href="manifest.json">
+    <title>André Financeiro Pro</title>
+    <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -13,19 +13,21 @@
         .card-glass { background: #1a1a1a; border: 1px solid #2d2d2d; border-radius: 1rem; }
         .text-lucro { color: #10b981; }
         .text-custo { color: #ef4444; }
+        #loader { transition: opacity 0.5s ease; }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="p-4 pb-20">
 
-    <div id="loader" class="fixed inset-0 bg-black flex items-center justify-center z-50">
-        <div class="text-emerald-500 animate-spin text-4xl"><i class="fas fa-circle-notch"></i></div>
+    <div id="loader" class="fixed inset-0 bg-black flex flex-col items-center justify-center z-50">
+        <div class="text-emerald-500 animate-spin text-4xl mb-4"><i class="fas fa-circle-notch"></i></div>
+        <p class="text-gray-500 text-sm">Sincronizando com Google Sheets...</p>
     </div>
 
     <div class="flex justify-between items-center mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-white">Resumo Financeiro</h1>
-            <p class="text-xs text-gray-500">Sinc: <span id="u_time">--:--</span></p>
+            <h1 class="text-2xl font-bold">Financeiro</h1>
+            <p class="text-xs text-gray-500">Sync: <span id="u_time">--:--</span></p>
         </div>
         <div class="bg-emerald-500/10 p-3 rounded-xl">
             <i class="fas fa-wallet text-emerald-500 text-xl"></i>
@@ -34,7 +36,7 @@
 
     <div class="grid grid-cols-1 gap-4 mb-6">
         <div class="card-glass p-6 border-l-4 border-emerald-500">
-            <p class="text-gray-400 text-sm font-medium">Ganhos do Mês</p>
+            <p class="text-gray-400 text-sm font-medium">Ganhos (Mês)</p>
             <h2 class="text-4xl font-black text-white mt-1" id="m_ganho">R$ 0,00</h2>
         </div>
         
@@ -44,7 +46,7 @@
                 <p class="text-lg font-bold text-custo" id="m_custo">R$ 0,00</p>
             </div>
             <div class="card-glass p-4">
-                <p class="text-gray-400 text-xs">Lucro Real</p>
+                <p class="text-gray-400 text-xs">Lucro Líquido</p>
                 <p class="text-lg font-bold text-lucro" id="m_lucro">R$ 0,00</p>
             </div>
         </div>
@@ -52,22 +54,21 @@
 
     <div class="card-glass p-4 mb-6">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-sm">Histórico</h3>
-            <select id="seletor_mes" class="bg-gray-800 text-emerald-500 text-xs font-bold outline-none rounded-lg px-2 py-1 border border-gray-700">
-            </select>
+            <h3 class="font-bold text-sm">Evolução Mensal</h3>
+            <select id="seletor_mes" class="bg-gray-800 text-emerald-500 text-xs font-bold outline-none rounded-lg px-2 py-1 border border-gray-700"></select>
         </div>
         <canvas id="chartBarras" height="150"></canvas>
     </div>
 
     <div class="card-glass p-5">
-        <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Detalhes</h3>
+        <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Detalhes Selecionados</h3>
         <div class="space-y-4">
-            <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-400">Ganho</span>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-400">Bruto</span>
                 <span id="det_ganho" class="font-bold text-white">R$ 0,00</span>
             </div>
-            <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-400">Custos</span>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-400">Despesas</span>
                 <span id="det_custo" class="font-bold text-custo">R$ 0,00</span>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
@@ -86,19 +87,19 @@
 
         async function init() {
             try {
-                console.log("Iniciando Fetch...");
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error("Erro na rede ou GAS fora do ar");
+                // Adicionado redirect: 'follow' para evitar problemas com o GAS
+                const response = await fetch(API_URL, { method: 'GET', redirect: 'follow' });
+                if (!response.ok) throw new Error("Erro na rede: " + response.status);
                 
                 const data = await response.json();
-                console.log("Dados carregados:", data);
+                console.log("Payload recebido do GAS:", data);
                 
-                document.getElementById('u_time').innerText = data.atualizado_em || '--:--';
+                document.getElementById('u_time').innerText = data.atualizado_em;
                 document.getElementById('m_ganho').innerText = fmt(data.mensal.ganho);
                 document.getElementById('m_custo').innerText = fmt(data.mensal.custo);
                 document.getElementById('m_lucro').innerText = fmt(data.mensal.lucro);
 
-                dadosMensais = data.filtros_mensais || [];
+                dadosMensais = data.filtros_mensais;
                 
                 const seletor = document.getElementById('seletor_mes');
                 seletor.innerHTML = dadosMensais.map(m => `<option value="${m.id}">${m.mes}</option>`).join('');
@@ -109,11 +110,21 @@
                 renderChart(dadosMensais);
                 atualizarDetalhe(mesAtual);
                 
-                document.getElementById('loader').style.display = 'none';
+                // Remove o loader com animação
+                const loader = document.getElementById('loader');
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
 
             } catch (err) {
-                console.error("Falha fatal:", err);
-                document.body.innerHTML = `<div class="p-10 text-center text-red-500 font-bold">Erro: ${err.message}<br><button onclick="location.reload()" class="bg-white text-black p-2 mt-4 rounded">Tentar de Novo</button></div>`;
+                console.error("Erro na inicialização:", err);
+                document.getElementById('loader').innerHTML = `
+                    <div class="p-6 text-center">
+                        <i class="fas fa-times-circle text-red-500 text-3xl mb-2"></i>
+                        <p class="text-white font-bold">Erro ao carregar dados</p>
+                        <p class="text-gray-500 text-xs mt-1">${err.message}</p>
+                        <button onclick="location.reload()" class="mt-4 bg-emerald-500 text-black px-4 py-2 rounded-lg font-bold text-sm">Reintentar</button>
+                    </div>
+                `;
             }
         }
 
@@ -126,8 +137,8 @@
                 data: {
                     labels: meses.map(m => m.mes),
                     datasets: [{ 
-                        label: 'Ganhos',
-                        data: meses.map(m => m.ganho), 
+                        label: 'Lucro',
+                        data: meses.map(m => m.lucro), 
                         backgroundColor: '#10b981', 
                         borderRadius: 6
                     }]
@@ -135,7 +146,10 @@
                 options: {
                     responsive: true,
                     plugins: { legend: { display: false } },
-                    scales: { y: { display: false }, x: { ticks: { color: '#888' }, grid: { display: false } } }
+                    scales: { 
+                        y: { display: false }, 
+                        x: { grid: { display: false }, ticks: { color: '#888' } } 
+                    }
                 }
             });
         }
@@ -151,10 +165,12 @@
 
         document.getElementById('seletor_mes').addEventListener('change', (e) => atualizarDetalhe(e.target.value));
 
+        // Registro do Service Worker ajustado para GitHub Pages
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Registro relativo para GitHub Pages
-                navigator.serviceWorker.register('./sw.js').catch(e => console.log("SW Fail"));
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('PWA: Ativo no escopo', reg.scope))
+                    .catch(err => console.error('PWA: Falha no registro', err));
             });
         }
 
