@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fin-dash-v3';
+const CACHE_NAME = 'fin-dash-v4';
 const ASSETS = [
   './',
   './index.html',
