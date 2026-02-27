@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendas</title>
+    <title>Dashboard André - Financeiro Pro</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,7 +13,6 @@
         .card-glass { background: #1a1a1a; border: 1px solid #2d2d2d; border-radius: 1rem; }
         .text-lucro { color: #10b981; }
         .text-custo { color: #ef4444; }
-        /* Esconde a scrollbar para parecer mais com App nativo */
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -21,36 +20,36 @@
 
     <div class="flex justify-between items-center mb-6">
         <div>
-            <h1 class="text-2xl font-bold">Financeiro</h1>
-            <p class="text-xs text-gray-500">Sync: <span id="u_time">--:--</span></p>
+            <h1 class="text-2xl font-bold text-white">Resumo Financeiro</h1>
+            <p class="text-xs text-gray-500">Última sincronização: <span id="u_time">--:--</span></p>
         </div>
-        <div class="bg-emerald-500/10 p-2 rounded-lg">
-            <i class="fas fa-chart-line text-emerald-500"></i>
+        <div class="bg-emerald-500/10 p-3 rounded-xl">
+            <i class="fas fa-wallet text-emerald-500 text-xl"></i>
         </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 mb-6">
-        <div class="card-glass p-5 border-l-4 border-emerald-500">
+        <div class="card-glass p-6 border-l-4 border-emerald-500">
             <p class="text-gray-400 text-sm font-medium">Ganhos do Mês</p>
-            <h2 class="text-3xl font-bold text-white mt-1" id="m_ganho">R$ 0,00</h2>
+            <h2 class="text-4xl font-black text-white mt-1" id="m_ganho">R$ 0,00</h2>
         </div>
         
         <div class="grid grid-cols-2 gap-4">
             <div class="card-glass p-4">
-                <p class="text-gray-400 text-xs">Custos</p>
-                <p class="text-lg font-semibold text-custo" id="m_custo">R$ 0,00</p>
+                <p class="text-gray-400 text-xs">Custos Totais</p>
+                <p class="text-lg font-bold text-custo" id="m_custo">R$ 0,00</p>
             </div>
             <div class="card-glass p-4">
-                <p class="text-gray-400 text-xs">Lucro Real</p>
-                <p class="text-lg font-semibold text-lucro" id="m_lucro">R$ 0,00</p>
+                <p class="text-gray-400 text-xs">Lucro Líquido</p>
+                <p class="text-lg font-bold text-lucro" id="m_lucro">R$ 0,00</p>
             </div>
         </div>
     </div>
 
     <div class="card-glass p-4 mb-6">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-sm">Histórico Mensal</h3>
-            <select id="seletor_mes" class="bg-transparent text-emerald-500 text-xs font-bold outline-none border border-emerald-500/30 rounded px-2 py-1">
+            <h3 class="font-bold text-sm">Evolução por Mês</h3>
+            <select id="seletor_mes" class="bg-gray-800 text-emerald-500 text-xs font-bold outline-none border border-gray-700 rounded-lg px-3 py-1">
                 </select>
         </div>
         <canvas id="chartBarras" height="150"></canvas>
@@ -60,16 +59,16 @@
         <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Performance Detalhada</h3>
         <div class="space-y-4">
             <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-400">Total Bruto</span>
-                <span id="det_ganho" class="font-bold text-white">R$ 0,00</span>
+                <span class="text-sm text-gray-400">Total Ganho</span>
+                <span id="det_ganho" class="font-bold text-white text-lg">R$ 0,00</span>
             </div>
             <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-400">Despesas</span>
-                <span id="det_custo" class="font-bold text-custo">R$ 0,00</span>
+                <span class="text-sm text-gray-400">Total Custos</span>
+                <span id="det_custo" class="font-bold text-custo text-lg">R$ 0,00</span>
             </div>
             <div class="pt-3 border-t border-gray-800 flex justify-between items-center">
-                <span class="text-sm font-bold text-emerald-500">Resultado Líquido</span>
-                <span id="det_lucro" class="font-bold text-emerald-500 text-xl">R$ 0,00</span>
+                <span class="text-sm font-bold text-emerald-500 uppercase">Lucro Real</span>
+                <span id="det_lucro" class="font-bold text-emerald-500 text-2xl">R$ 0,00</span>
             </div>
         </div>
     </div>
@@ -82,10 +81,15 @@
         const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
         async function init() {
+            console.log("Tentando ligar os motores do GAS...");
             try {
                 const response = await fetch(API_URL);
-                const data = await response.json();
+                if (!response.ok) throw new Error("Erro na rede");
                 
+                const data = await response.json();
+                console.log("Dados recebidos com sucesso:", data);
+                
+                // Mapeamento dos campos do JSON recebido
                 document.getElementById('u_time').innerText = data.atualizado_em;
                 document.getElementById('m_ganho').innerText = fmt(data.mensal.ganho);
                 document.getElementById('m_custo').innerText = fmt(data.mensal.custo);
@@ -95,14 +99,25 @@
                 
                 const seletor = document.getElementById('seletor_mes');
                 seletor.innerHTML = dadosMensais.map(m => `<option value="${m.id}">${m.mes}</option>`).join('');
-                seletor.value = new Date().getMonth() + 1;
+                
+                // Seleciona o mês atual automaticamente
+                const mesAtualReal = new Date().getMonth() + 1;
+                seletor.value = mesAtualReal;
 
                 renderChart(dadosMensais);
-                atualizarDetalhe(seletor.value);
+                atualizarDetalhe(mesAtualReal);
 
             } catch (err) {
-                console.error("Erro na integração com o GAS:", err);
-                alert("Erro ao sincronizar dados. Verifique a conexão.");
+                console.error("ERRO NO DEPLOY DO FRONTEND:", err);
+                // Exibe erro visual se o GAS falhar
+                document.body.innerHTML = `
+                    <div class="p-10 text-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                        <h2 class="text-white font-bold">Erro de Conexão</h2>
+                        <p class="text-gray-500 text-sm mt-2">${err.message}</p>
+                        <button onclick="location.reload()" class="mt-6 bg-emerald-500 px-4 py-2 rounded-lg text-black font-bold">Tentar Novamente</button>
+                    </div>
+                `;
             }
         }
 
@@ -115,11 +130,10 @@
                 data: {
                     labels: meses.map(m => m.mes),
                     datasets: [{ 
-                        label: 'Lucro',
-                        data: meses.map(m => m.lucro), 
+                        label: 'Ganhos',
+                        data: meses.map(m => m.ganho), 
                         backgroundColor: '#10b981', 
-                        borderRadius: 6,
-                        borderSkipped: false
+                        borderRadius: 6
                     }]
                 },
                 options: {
@@ -127,7 +141,7 @@
                     plugins: { legend: { display: false } },
                     scales: { 
                         y: { display: false },
-                        x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
+                        x: { grid: { display: false }, ticks: { color: '#888' } }
                     }
                 }
             });
@@ -144,12 +158,12 @@
 
         document.getElementById('seletor_mes').addEventListener('change', (e) => atualizarDetalhe(e.target.value));
 
-        // REGISTRO DO SERVICE WORKER (PWA)
+        // Registro do Service Worker para o PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    console.log('Worker no ar, André!');
-                }).catch(err => console.log('Erro no Worker:', err));
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker ativo para André!'))
+                    .catch(err => console.log('Erro no Service Worker:', err));
             });
         }
 
